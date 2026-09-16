@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "artifacts": [
+    {
+      "id": "attached-text",
+      "kind": "Attached file",
+      "captured_path": "prompt_source_assets/prompt-000006-notes.txt",
+      "payload_base64": "Rml4dHVyZSBhdHRhY2htZW50ClVuaWNvZGU6IGNhZsOpCg==",
+      "byte_count": 34,
+      "sha256": "28c0632356506034aba615a14939b0631f2f3ea9cdc2bc99abb3e9ec468b6b2f"
+    },
+    {
+      "id": "attached-image",
+      "kind": "Attached image",
+      "captured_path": "prompt_source_assets/prompt-000007-Logo-Final.png",
+      "payload_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mMwTpv5HwAENAIyhHMY8AAAAABJRU5ErkJggg==",
+      "byte_count": 70,
+      "sha256": "afab3cd49cf0a47b361ed2b78bd43febfa7fcfd0ab49fc065d5c36c505a4da98"
+    },
+    {
+      "id": "pasted-image",
+      "kind": "Pasted image",
+      "captured_path": "prompt_source_assets/prompt-000008-image-001.png",
+      "payload_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAHHRFWHRmaXh0dXJlAGRlc2t0b3AtbWF0ZXJpYWxpemVkQpn8MwAAAA1JREFUeNpjME6b+R8ABDQCMoRzGPAAAAAASUVORK5CYII=",
+      "byte_count": 110,
+      "sha256": "e8f8b0ee40de543ed9937f65b2940765a3347d18c4cc92137369e0c7423a0eb3",
+      "pre_clipboard_payload_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4AWMwTpv5HwAENAIyqV2JEgAAAABJRU5ErkJggg==",
+      "pre_clipboard_byte_count": 70,
+      "pre_clipboard_sha256": "3759a41b8b57aa59c46ce086048042297abed9ec54a540e85449a357a792ff20",
+      "decoded_pixels_equal": true
+    },
+    {
+      "id": "missing-artifact",
+      "kind": "Attached file",
+      "captured_path": null,
+      "preservation": "Unavailable",
+      "unavailable_reason": "Source data was no longer accessible when preservation was attempted."
+    }
+  ]
+}

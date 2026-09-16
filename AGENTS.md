@@ -88,6 +88,10 @@ generated-artifact exclusion as a prohibition on publishing the PromptSourceCode
 or any project that uses it.
 
 The PromptSourceCode repository's source, tests, and documentation follow the normal Git
-workflow and may be committed and pushed when the user requests it. The product's default
-Git exclusion applies only to the generated `PROMPT_SOURCE.md` and
+workflow. Unless the user explicitly says not to commit or push, completed development
+changes may be committed and pushed directly to the intended branch. Do not open a pull
+request merely in order to merge the work; use a pull request only when the user
+explicitly requests that workflow.
+
+The product's default Git exclusion applies only to the generated `PROMPT_SOURCE.md` and
 `prompt_source_assets/` in projects being captured.

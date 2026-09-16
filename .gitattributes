@@ -1,0 +1,2 @@
+# This fixture intentionally tests literal trailing spaces inside a fenced payload.
+tests/fixtures/expected-history.md whitespace=-blank-at-eol

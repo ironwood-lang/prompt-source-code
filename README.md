@@ -56,14 +56,32 @@ they entered the clipboard.
 
 ## Project Status
 
-The Codex Desktop feasibility experiments are complete. The canonical history format and
-standard `AGENTS.md` template are the next implementation milestone, followed by the
-optional hook enhancement and release hardening.
+Milestone 1, the format and instruction contract, is complete. The repository now contains
+the canonical version 1 history specification, a copyable standard-capture `AGENTS.md`
+block, representative fixtures, automated contract checks, and a manual Codex Desktop
+validation checklist.
+
+The standard-capture release-candidate run in a fresh disposable Desktop project remains
+Milestone 2 work. The optional hook enhancement and version 1 release hardening follow it;
+hooks are not implemented or required by the current template.
 
 See:
 
+- [Canonical format](docs/PROMPT_SOURCE_FORMAT.md)
+- [Installable standard-capture instructions](templates/AGENTS.prompt-source-standard.md)
+- [Manual Codex Desktop validation checklist](docs/MANUAL_CODEX_DESKTOP_VALIDATION.md)
 - [Codex Desktop capture experiment](docs/CODEX_DESKTOP_CAPTURE_EXPERIMENT.md)
 - [Implementation roadmap](docs/ROADMAP.md)
+
+The root [`AGENTS.md`](AGENTS.md) governs development of PromptSourceCode itself. It is
+not the end-user capture template. To prepare an end-user project, include the dedicated
+template's contents in that project's root `AGENTS.md`.
+
+Run the deterministic Milestone 1 checks with:
+
+```text
+python3 -m unittest discover -s tests -v
+```
 
 ## Generated History and Git
 

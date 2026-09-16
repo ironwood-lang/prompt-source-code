@@ -24,7 +24,7 @@ Evidence is documented in
 
 ## Milestone 1: Format and Instruction Contract
 
-**Status:** In progress
+**Status:** Complete
 
 - Specify the canonical `PROMPT_SOURCE.md` structure.
 - Define entry numbering, status transitions, capture-method labels, and result fields.
@@ -37,6 +37,19 @@ Evidence is documented in
 **Exit criterion:** A fresh Codex Desktop project can use the documented instructions to
 produce one readable, chronological `PROMPT_SOURCE.md` and one flat assets directory for
 all tested interaction types.
+
+Delivered in:
+
+- [`PROMPT_SOURCE_FORMAT.md`](PROMPT_SOURCE_FORMAT.md)
+- [`../templates/AGENTS.prompt-source-standard.md`](../templates/AGENTS.prompt-source-standard.md)
+- [`../tests/fixtures/expected-history.md`](../tests/fixtures/expected-history.md)
+- [`../tests/test_format.py`](../tests/test_format.py)
+- [`MANUAL_CODEX_DESKTOP_VALIDATION.md`](MANUAL_CODEX_DESKTOP_VALIDATION.md)
+
+The fixture contract and deterministic checks are complete. The first full run of the
+final standard template in a clean disposable Desktop project is deliberately retained as
+the Milestone 2 release-candidate validation, so this milestone does not claim that later
+test has already occurred.
 
 ## Milestone 2: Standard Capture Release Candidate
 
