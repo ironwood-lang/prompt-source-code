@@ -33,6 +33,8 @@ Use the following format when appending entries to `docs/PROMPT_HISTORY.md`:
 
 **Timestamp:** `2026-09-16T10:14:23-03:00`
 **Agent:** Codex
+**Model:** Astra 6
+**Effort:** Extra High
 
 ### User Input
 
@@ -40,7 +42,7 @@ Use the following format when appending entries to `docs/PROMPT_HISTORY.md`:
 
 ### Attachments
 
-- [paths to attached, referenced, or preserved artifacts, if any]
+- [paths to attached, referenced, pasted images or preserved artifacts, if any]
 
 ### Result
 
