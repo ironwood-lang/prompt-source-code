@@ -45,7 +45,6 @@ Use the following format when appending entries to `docs/PROMPT_HISTORY.md`:
 ### Result
 
 [short factual description of what the agent did in response]
-```
 
 Omit `Attachments` when there are no attachments or user-supplied artifacts.
 
