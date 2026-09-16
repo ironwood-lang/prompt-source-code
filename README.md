@@ -1,6 +1,6 @@
-# prompt-source-code
+# PromptSourceCode
 
-Include the instructions below in you AGENTS.md or CLAUDE.md file, before starting any project:
+Include the instructions below in you AGENTS.md or CLAUDE.md file, before starting your project:
 
 ```markdown
 ## Prompt History
