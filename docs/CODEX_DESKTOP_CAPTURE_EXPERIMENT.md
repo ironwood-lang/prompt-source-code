@@ -249,11 +249,15 @@ prompt_source_assets/
 The implementation will not create per-prompt directories or separate `input.md`,
 `status.md`, `result.md`, or runtime-context files.
 
-## Git Publication Policy
+## Generated History Git Policy
 
-PromptSourceCode may create and update local working-tree files. It must never stage,
-commit, push, publish, upload, or create a pull request unless the user explicitly requests
-that exact action in the current task.
+PromptSourceCode may create and update `PROMPT_SOURCE.md` and
+`prompt_source_assets/` locally. It must not stage, commit, push, publish, or upload those
+generated provenance artifacts unless the user explicitly requests it.
+
+This default applies only to PromptSourceCode's generated history and assets. It does not
+restrict normal Git operations for source code, tests, documentation, or other files in the
+tracked project.
 
 ## Conclusions
 
