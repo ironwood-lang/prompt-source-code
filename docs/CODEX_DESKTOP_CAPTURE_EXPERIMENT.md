@@ -2,11 +2,12 @@
 
 ## Status
 
-Completed on 2026-09-16 using a disposable local project in Codex Desktop.
+Completed on 2026-09-16 using a disposable local project in Codex Desktop, with Codex
+CLI used only to review and trust the experimental hooks.
 
-The experiment evaluated whether repository-level `AGENTS.md` instructions, without a
-skill, plugin, or lifecycle hook, could preserve the user interaction history needed by
-PromptSourceCode.
+The experiment first evaluated whether repository-level `AGENTS.md` instructions could
+preserve the user interaction history needed by PromptSourceCode. A subsequent disposable
+hook experiment evaluated deterministic prompt and interruption capture in Desktop.
 
 ## Scope
 
@@ -20,9 +21,13 @@ The experiment covered:
 5. An attached PNG with a known source file.
 6. The same image pasted through the clipboard.
 7. A turn interrupted by the user before completion.
+8. `UserPromptSubmit` delivery for an initial prompt and a mid-turn steering message.
+9. `Interrupt` delivery when the user pressed Stop during an active turn.
+10. Repository-local hook discovery, review, trust, and execution in Desktop.
 
-The experiment did not test Codex CLI, the Codex IDE extension, cloud execution, or
-other coding agents.
+The experiment did not test Codex CLI as a coding environment, the Codex IDE extension,
+cloud execution, or other coding agents. Codex CLI was used only for `/hooks` trust
+management because Desktop did not expose an equivalent workflow in this experiment.
 
 ## Results
 
@@ -35,6 +40,9 @@ other coding agents.
 | Attached PNG | Passed | The copied PNG was byte-identical to the source file. |
 | Pasted image | Passed with an accepted fidelity boundary | Codex copied the PNG materialized by Codex Desktop byte-for-byte. The materialized PNG was pixel-identical but not binary-identical to the original file. |
 | User interruption | Partially passed | The initiating prompt was recorded, but the button-only interruption was not. |
+| Hook prompt capture | Passed after CLI trust | Desktop emitted `UserPromptSubmit` for both the initial prompt and the mid-turn steering message. |
+| Hook interruption capture | Passed after CLI trust | Desktop emitted `Interrupt` when the user pressed Stop. |
+| Desktop hook onboarding | Failed as a Desktop-only workflow | Desktop ran trusted hooks but did not provide a discovered review-and-trust interface; `/hooks` in Codex CLI was required. |
 
 ## Detailed Findings
 
@@ -144,7 +152,75 @@ The instructions-only implementation will use an explicit status lifecycle:
 4. On a later interaction, an unfinished prior entry may be marked `Incomplete`, with the
    reason stated as unavailable rather than invented.
 
-An optional future `Interrupt` hook may record a user interruption explicitly.
+The successful `Interrupt` experiment confirms that an optional hook can record a user
+interruption explicitly.
+
+### Hook feasibility experiment
+
+A disposable repository-local hook logged the raw JSON received on standard input for
+`UserPromptSubmit` and `Interrupt`. Each record also stored the raw byte count, SHA-256,
+and Base64 so the captured bytes could be checked independently of JSON parsing.
+
+The first attempt did not run because the disposable directory was not yet a Git
+repository. Codex uses `.git` as the default project-root marker, so the repository-local
+`.codex/hooks.json` was not in an active project configuration layer. After initializing
+the disposable repository, the hooks were discoverable but still skipped because their
+exact definitions had not been trusted.
+
+Codex Desktop did not expose a hook review-and-trust interface during the experiment.
+Using `/hooks` in Codex CLI created separate hash-bound trust records for
+`UserPromptSubmit` and `Interrupt`. After restarting Desktop and opening a new task, both
+hooks executed successfully. Changing either hook definition will invalidate the matching
+trust decision and require another review.
+
+The final Desktop run produced four records in chronological order:
+
+1. `UserPromptSubmit` for the initial prompt.
+2. `UserPromptSubmit` for a steering message sent while the same turn was active.
+3. `UserPromptSubmit` for a prompt that began a new turn.
+4. `Interrupt` when the user pressed Stop during that new turn.
+
+The initial prompt and steering message shared the same `session_id` and `turn_id`. The
+next prompt had a new `turn_id`, and the `Interrupt` event used that same new turn ID. This
+provides deterministic linkage between steering messages, ordinary turns, and the turn
+that was interrupted.
+
+Every event contained:
+
+- `session_id`
+- `transcript_path`
+- `cwd`
+- `hook_event_name`
+- `model`
+- `permission_mode`
+- `turn_id`
+
+`UserPromptSubmit` additionally contained `prompt`. `Interrupt` did not contain a prompt
+or user-authored explanation. The three prompt values matched the Desktop task transcript,
+including their final newline. All raw byte counts, SHA-256 values, Base64 round trips, and
+parsed JSON comparisons succeeded.
+
+The hook therefore solves two limitations of model-mediated `AGENTS.md` capture:
+
+1. It receives the agent-visible prompt string deterministically before submission.
+2. It records a button-only interruption and identifies the affected turn explicitly.
+
+The hook does not capture pre-serialization editor state or raw keystrokes. Its fidelity
+boundary remains the text representation Codex Desktop submits to the Codex runtime.
+This hook run tested text prompts and interruption only. It did not establish that the
+`prompt` string contains structured attachment or pasted-image data, so binary artifact
+preservation still depends on the separately tested Desktop file access and capture logic.
+
+### Hook product implications
+
+The Desktop hook runtime itself passed. The onboarding experience did not pass the
+Desktop-only, out-of-the-box requirement because the user had to open Codex CLI and trust
+each hook through `/hooks`. Packaging the hook in a plugin would not remove this issue:
+plugin hooks use the same trust review process and are not trusted automatically.
+
+Consequently, hooks should not be mandatory for the first Desktop release unless Desktop
+adds an accessible hook trust interface. They remain valuable as an optional advanced
+enhancement for deterministic prompt capture and explicit interruption records.
 
 ## Agreed Storage Format
 
@@ -181,16 +257,17 @@ that exact action in the current task.
 
 ## Conclusions
 
-An `AGENTS.md`-only implementation is viable as the first Codex Desktop version. It
+An `AGENTS.md`-based implementation is viable as the first Codex Desktop version. It
 successfully preserved ordinary prompts, follow-ups, steering, attached files, and pasted
 images under the fidelity definitions above.
 
-Hooks are not required to establish the core product. They may improve two areas:
+Trusted hooks work in Codex Desktop and improve two areas:
 
 1. Deterministic capture of the prompt string without asking the model to reproduce it.
 2. Explicit recording of button-only interruption events.
 
-The next research step should be a narrowly scoped Codex Desktop hook feasibility test. It
-should evaluate `UserPromptSubmit`, `Interrupt`, and the Desktop review-and-trust experience.
-Failure or excessive end-user complexity will not block an instructions-first v1.
-
+However, the tested Desktop build did not offer a complete hook trust workflow. Requiring
+Codex CLI solely for `/hooks` would violate the intended Desktop-first, straightforward
+onboarding experience. PromptSourceCode v1 should therefore keep hooks optional and must
+remain useful without them. Hook-based capture can become the preferred path if Desktop
+later provides a direct, understandable trust interface.
