@@ -12,6 +12,8 @@ repository.
   but have different bytes and digests.
 - `hook-events.json` contains non-sensitive representative `UserPromptSubmit` and
   `Interrupt` objects for deterministic parser and identifier-association tests.
+- `release-manifest.json` freezes the exact byte counts and SHA-256 digests of the
+  copyable version 1 standard template and optional hook assets.
 
 There is intentionally no `prompt_source_assets/` fixture directory. The expected
 history models its flat repository-relative references while the test suite checks the

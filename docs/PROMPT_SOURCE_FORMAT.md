@@ -2,9 +2,10 @@
 
 ## Status and scope
 
-This document defines the canonical version 1 format produced by PromptSourceCode for
-Codex Desktop projects. It is the normative contract shared by the standard,
-instruction-mediated capture path and the explicitly enabled optional hook-assisted path.
+This document is the frozen, normative PromptSourceCode schema-1 contract for Codex
+Desktop projects. It is shared by the standard, instruction-mediated capture path and the
+explicitly enabled optional hook-assisted path. Version 1 implementations may fix code or
+clarify prose, but they MUST NOT reinterpret a valid schema-1 history or make one invalid.
 
 Version 1 has exactly two persistent outputs in a captured project:
 
@@ -21,6 +22,32 @@ context files.
 The format targets Codex Desktop only. Standard capture does not require hooks, a skill,
 a plugin, a background service, or network access. Hook assistance does not change the
 two-output topology.
+
+## Schema marker and versioning policy
+
+The exact first-line marker is:
+
+```text
+<!-- prompt-source-schema: 1 -->
+```
+
+The integer is the storage-format compatibility version. It is not a product build,
+release tag, Codex version, or semantic-version string. Schema 1 is a closed contract:
+its entry metadata fields, structural sections, payload reconstruction rules, lifecycle,
+and artifact semantics are the ones defined in this document.
+
+A future change MUST use a new schema marker when it changes required storage topology,
+required or permitted entry metadata, the interpretation of existing bytes, payload or
+newline reconstruction, lifecycle transitions, artifact fidelity, or any other rule that
+would make a valid schema-1 history mean something different or become invalid. Tests,
+implementation corrections, and documentation clarifications may retain schema 1 only
+when valid histories keep the same meaning and remain valid.
+
+Version 1 supplies no extension namespace and no automatic migration. An unrecognized
+entry metadata field or structural variant is not silently discarded. A writer preserves
+the existing bytes and stops rather than guessing. Future migration guidance must be
+explicit and must preserve the source history and artifacts until a user deliberately
+accepts conversion.
 
 ## Fidelity boundary
 
@@ -179,6 +206,11 @@ order:
 Unavailable optional values are normally omitted. If the absence itself matters, use the
 literal `Unavailable` or a factual explanation. Never invent timestamps, identifiers,
 model names, paths, byte counts, hashes, or reasons.
+
+The metadata field set and ordering above are closed for schema 1. Unrecognized or
+out-of-order entry metadata makes the history unsafe for a version 1 writer to modify.
+This prevents a version 1 update from silently deleting or misinterpreting data written
+under another contract.
 
 ## User input representation
 
@@ -393,6 +425,21 @@ not known, use `Unavailable reason: Unknown`.
 
 `Status` has exactly four values.
 
+The permitted status transitions are:
+
+| Current state | Permitted next state | Authority |
+| --- | --- | --- |
+| `In progress` | `In progress` | Capture or enrichment may add verified initial metadata without finalizing work. |
+| `In progress` | `Completed` | The handling agent, after the interaction is finished. |
+| `In progress` | `Incomplete` | A later interaction or directly observed failure, without a matching trusted interrupt. |
+| `In progress` | `Interrupted` | Only the trusted `Interrupt` hook for the exact session and turn. |
+| Any terminal state | The same state only | Later safe enrichment may not change `Completed`, `Incomplete`, or `Interrupted` into another state. |
+
+No transition may go back to `In progress`. `Completed`, `Incomplete`, and `Interrupted`
+are terminal lifecycle states. A terminal entry's factual result may be completed or
+clarified only without changing immutable captured content or changing that terminal
+state.
+
 ### In progress
 
 Create the entry with `Status: In progress` before performing the requested work. Copying
@@ -548,6 +595,44 @@ the standard instruction-mediated path receives the interaction. This guard appl
 to event invocation. Direct agent claim and replacement helpers retain nonzero failures
 for stale, ambiguous, or unsafe updates.
 
+## Ordering, concurrency, and crash-safety guarantees
+
+Both capture methods produce the same chronological schema but have different mechanical
+guarantees:
+
+| Property | Standard instruction-mediated path | Optional hook-assisted path |
+| --- | --- | --- |
+| Entry order | Agent verifies increasing structural headings, appends at physical EOF, and rechecks before task work. | The handler validates the full history and appends at physical EOF while holding the writer lock. |
+| Concurrent writers | Detect-and-retry instructions are required, but no multi-process serialization is claimed. | All appends, claims, interrupts, and replacements share one project-directory lock. |
+| Crash safety | No atomic multi-writer or crash-safe guarantee is claimed. A later interaction preserves and resolves a stale unfinished entry honestly. | Same-directory temporary write, file `fsync`, atomic replacement, and directory `fsync`; failure before replacement retains the last complete history. |
+| Persistent runtime state | Only the canonical history and preserved assets. | The same; lock and temporary files exist only during an operation and no event log is written. |
+
+Neither path may repair unrelated history corruption. The standard path's only bounded
+repair is moving its own newly created, still-unfinished block to physical EOF when that
+block's exact boundary is known and verification occurs before task work. The hook path
+performs no structural repair.
+
+## Invalid, truncated, incompatible, and future histories
+
+A writer distinguishes an absent history from an unsafe existing history:
+
+- An absent `PROMPT_SOURCE.md` may be initialized with the canonical schema-1 header.
+- An existing empty file, missing or different first-line marker, unsupported or future
+  marker, invalid UTF-8, truncated payload, unclosed or noncanonical fence, invalid
+  newline marker, duplicate metadata, unrecognized or out-of-order entry metadata,
+  duplicate or non-increasing structural entry number, missing required field, invalid
+  lifecycle state, or stale optimistic digest is a conflict.
+- A numbering gap by itself is valid. Writers append one more than the greatest valid
+  structural number and never fill the gap.
+- On conflict, preserve the history bytes and artifacts, report the problem, and perform
+  no append, claim, interruption, replacement, or automatic migration.
+- A guarded event-hook failure emits no matching context so standard capture can remain
+  available, but it does not authorize rewriting an incompatible history.
+
+These rules also apply when a future PromptSourceCode version uses a marker other than
+schema 1. Version 1 stops safely; it never prepends its header, treats the file as empty,
+or promises an unimplemented migration.
+
 ## Git policy
 
 By default, PromptSourceCode MUST NOT stage, commit, push, publish, or upload generated
@@ -557,3 +642,14 @@ requests inclusion of those generated provenance artifacts.
 This restriction applies only to generated PromptSourceCode history and assets. It does
 not restrict the normal Git workflow for source code, tests, documentation, or other
 project files.
+
+## Future PromptSourceCode compatibility
+
+Future implementations that still claim schema-1 write compatibility MUST preserve every
+existing immutable value and artifact byte, honor the same capture-method and lifecycle
+rules, and append without renumbering or normalization. A reader may inspect a schema-1
+history in an otherwise untested environment, but that does not establish support for
+live capture there.
+
+See [`COMPATIBILITY.md`](COMPATIBILITY.md) for tested environments, upgrade steps, and the
+required stop behavior for non-version-1 histories.

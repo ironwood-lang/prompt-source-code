@@ -4,13 +4,21 @@ Use this checklist for behavior that fixture tests cannot prove. Run it only in 
 disposable project outside the PromptSourceCode repository. Do not enable capture in the
 PromptSourceCode development repository.
 
-Milestone 2 completed this checklist in the tested Desktop environment. See
+Milestone 2 completed the standard-path checklist and Milestone 3 completed the optional
+hook checklist in their tested Desktop environments. See
 [`CODEX_DESKTOP_STANDARD_CAPTURE_VALIDATION.md`](CODEX_DESKTOP_STANDARD_CAPTURE_VALIDATION.md)
-for the factual release-candidate evidence. Keep this file reusable and unchecked for
-future regression runs.
+and [`CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md`](CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md)
+for that evidence. Milestone 4 repeats the release-critical cases from the final bundle;
+its factual results belong in
+[`CODEX_DESKTOP_V1_RELEASE_READINESS.md`](CODEX_DESKTOP_V1_RELEASE_READINESS.md). Keep this
+file reusable and unchecked for future regression runs.
 
 ## Setup
 
+- [ ] Resolve and preserve any earlier disposable projects before creating a clearly
+  named fresh local Git project; do not reset or silently reuse prior evidence.
+- [ ] Record the source commit, release-asset manifest, Desktop, macOS, Python, and Git
+  versions used by the run without publishing full session or turn identifiers.
 - [ ] Create a disposable local Git repository and open it as a project in Codex Desktop.
 - [ ] Add the contents of
   [`templates/AGENTS.prompt-source-standard.md`](../templates/AGENTS.prompt-source-standard.md)
@@ -73,6 +81,19 @@ future regression runs.
 - [ ] Save the Desktop version and factual results with the Milestone 2 evidence; do not
   claim support for other environments based on this run.
 
+## Standard-capture lifecycle
+
+- [ ] Starting from the enabled final template, complete an ordinary standard capture and
+  record the history byte count and SHA-256.
+- [ ] Change only the control line to `- Capture: disabled`, then submit a new Desktop
+  interaction. Confirm the history and assets remain byte-for-byte unchanged.
+- [ ] Change only the control line back to `- Capture: enabled`, submit another
+  interaction, and confirm capture resumes at physical EOF after the greatest structural
+  entry number without rewriting older entries.
+- [ ] Confirm removing the instruction block is documented as stopping future standard
+  capture without silently deleting existing history. Do not delete validation evidence
+  merely to exercise that documented behavior.
+
 ## Optional hook-assisted validation
 
 Run this section in another fresh disposable local Git project. Preserve earlier projects
@@ -126,6 +147,23 @@ Codex Desktop.
 - [ ] Disable or remove both hooks, restart Desktop, and confirm the next interaction uses
   standard instruction-mediated capture successfully.
 
-Record case-by-case factual evidence in
+## Final version 1 checks
+
+- [ ] Validate the final history with the release hook core and deterministic format
+  checks. Confirm unique increasing structural headings, canonical dynamic fences,
+  newline reconstruction, required results, and schema marker 1.
+- [ ] Confirm the final project contains no persistent lock, temporary, event-log, status,
+  input, result, runtime-context, diagnostic, or bytecode-cache output.
+- [ ] Confirm copied standard and hook assets match the release manifest before any
+  deliberate failure injection; record non-sensitive sizes and SHA-256 values.
+- [ ] Confirm generated provenance and optional hook installation files remain unstaged,
+  uncommitted, unpushed, unpublished, and unuploaded, while an ordinary project file can
+  be staged, committed, and pushed through the project's normal Git workflow.
+
+For a new optional-hook implementation run, record case-by-case factual evidence without
+rewriting the historical
 [`CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md`](CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md).
-Leave Milestone 3 incomplete if any required Desktop-only case was not actually performed.
+For a version 1 release run, record the final-bundle cases in
+[`CODEX_DESKTOP_V1_RELEASE_READINESS.md`](CODEX_DESKTOP_V1_RELEASE_READINESS.md). Do not
+mark the corresponding milestone complete unless every required Desktop-only case was
+actually performed.

@@ -3,6 +3,7 @@ import io
 import json
 import multiprocessing
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -234,8 +235,7 @@ class HookCaptureTests(unittest.TestCase):
             fixture = (ROOT / "tests" / "fixtures" / "expected-history.md").read_text(
                 encoding="utf-8"
             )
-            repeated = "\n### Result\n\nRepeated result marker.\n\nChanged files: None.\n"
-            history = fixture + repeated + repeated
+            history = fixture
             path = root / core.HISTORY_NAME
             path.write_text(history, encoding="utf-8")
             previous = core.validate_history(history)
@@ -377,6 +377,65 @@ class HookCaptureTests(unittest.TestCase):
             bad = updated.text.replace(prompt.rstrip("\n"), "rewritten")
             with self.assertRaises(core.HistoryConflict):
                 core.replace_entry(root, replacement_request(updated, bad, prompt))
+
+    def test_agent_correction_association_points_backward_without_rewriting(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            original_prompt = "Use ALPHA.\n"
+            correction_prompt = "Correction: use BETA instead.\n"
+            core.capture_prompt(root, prompt_event(root, original_prompt, turn="turn-a"))
+            original = core.claim_entry(
+                root,
+                claim(1, original_prompt, turn="turn-a"),
+            )
+            original_completed = original.text.replace(
+                "- Status: In progress\n", "- Status: Completed\n", 1
+            )
+            original_completed += (
+                "\n### Result\n\nRecorded ALPHA pending later direction.\n\n"
+                "Changed files: None.\n"
+            )
+            core.replace_entry(
+                root,
+                replacement_request(
+                    original,
+                    original_completed,
+                    original_prompt,
+                    turn="turn-a",
+                ),
+            )
+
+            core.capture_prompt(root, prompt_event(root, correction_prompt, turn="turn-b"))
+            correction = core.claim_entry(
+                root,
+                claim(2, correction_prompt, turn="turn-b"),
+            )
+            corrected = correction.text.replace(
+                "- Interaction: Follow-up\n", "- Interaction: Correction\n", 1
+            ).replace(
+                "- Continues: Entry 000001\n",
+                "- Supersedes: Entry 000001\n",
+                1,
+            )
+            corrected = corrected.replace(
+                "- Status: In progress\n", "- Status: Completed\n", 1
+            )
+            corrected += "\n### Result\n\nApplied BETA.\n\nChanged files: None.\n"
+            core.replace_entry(
+                root,
+                replacement_request(
+                    correction,
+                    corrected,
+                    correction_prompt,
+                    turn="turn-b",
+                ),
+            )
+            entries = core.validate_history(
+                (root / core.HISTORY_NAME).read_text(encoding="utf-8")
+            )
+            self.assertEqual(entries[1].fields["Interaction"], "Correction")
+            self.assertEqual(entries[1].fields["Supersedes"], "Entry 000001")
+            self.assertEqual(entries[0].prompt, original_prompt)
 
     def test_later_steering_appends_do_not_change_earlier_entry_digest(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -647,6 +706,55 @@ class HookCaptureTests(unittest.TestCase):
                 core.capture_prompt(root, prompt_event(root, "three\n", turn="three"))
             self.assertEqual(path.read_bytes(), before)
 
+    def test_unknown_or_out_of_order_metadata_and_invalid_results_are_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / core.HISTORY_NAME
+            core.capture_prompt(root, prompt_event(root, "metadata\n"))
+            valid = path.read_text(encoding="utf-8")
+
+            unknown = valid.replace(
+                "- Agent observation: Pending\n",
+                "- Future field: opaque\n- Agent observation: Pending\n",
+                1,
+            )
+            path.write_text(unknown, encoding="utf-8")
+            before = path.read_bytes()
+            with self.assertRaises(core.HistoryConflict):
+                core.capture_prompt(root, prompt_event(root, "next\n", turn="turn-2"))
+            self.assertEqual(path.read_bytes(), before)
+
+            out_of_order = valid.replace(
+                '- Session ID: "session-1"\n- Turn ID: "turn-1"\n',
+                '- Turn ID: "turn-1"\n- Session ID: "session-1"\n',
+                1,
+            )
+            path.write_text(out_of_order, encoding="utf-8")
+            before = path.read_bytes()
+            with self.assertRaises(core.HistoryConflict):
+                core.capture_prompt(root, prompt_event(root, "next\n", turn="turn-2"))
+            self.assertEqual(path.read_bytes(), before)
+
+            path.write_text(valid, encoding="utf-8")
+            pending = core.validate_history(valid)[0]
+            completed_without_result = pending.text.replace(
+                "- Status: In progress\n", "- Status: Completed\n", 1
+            )
+            with self.assertRaises(core.HistoryConflict):
+                core.replace_entry(
+                    root,
+                    replacement_request(pending, completed_without_result, "metadata\n"),
+                )
+
+            in_progress_with_result = (
+                pending.text + "\n### Result\n\nPremature.\n\nChanged files: None.\n"
+            )
+            with self.assertRaises(core.HistoryConflict):
+                core.replace_entry(
+                    root,
+                    replacement_request(pending, in_progress_with_result, "metadata\n"),
+                )
+
             duplicate = (
                 core.HEADER
                 + "\n"
@@ -767,16 +875,18 @@ class HookCaptureTests(unittest.TestCase):
             self.assertIn("/bin/sh -c", command)
             self.assertIn("continuing with standard capture", command)
         self.assertFalse((ROOT / ".codex" / "hooks.json").exists())
-        source = (HOOKS / "prompt_source_core.py").read_text(encoding="utf-8")
+        source = "\n".join(
+            path.read_text(encoding="utf-8") for path in sorted(HOOKS.glob("*.py"))
+        )
+        config_text = (HOOKS / "hooks.json.example").read_text(encoding="utf-8")
         for forbidden in (
-            "import socket",
-            "import subprocess",
-            "import urllib",
-            "git add",
-            "git commit",
-            "git push",
+            r"\bimport\s+(?:socket|subprocess|urllib|http|requests|httpx)\b",
+            r"\bfrom\s+(?:socket|subprocess|urllib|http|requests|httpx)\b",
+            r"\b(?:curl|wget)\b",
+            r"\bgit\s+(?:add|commit|push|fetch|pull|status|rev-parse)\b",
         ):
-            self.assertNotIn(forbidden, source)
+            self.assertIsNone(re.search(forbidden, source, flags=re.IGNORECASE))
+            self.assertIsNone(re.search(forbidden, config_text, flags=re.IGNORECASE))
 
 
 if __name__ == "__main__":

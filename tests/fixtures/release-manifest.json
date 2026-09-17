@@ -1,0 +1,22 @@
+{
+  "release": "version 1",
+  "prompt_source_schema": 1,
+  "files": {
+    "templates/AGENTS.prompt-source-standard.md": {
+      "byte_count": 18250,
+      "sha256": "ef276c69b7f2f1f61811d10003bcde0195365719d8c163ef82d8438302db777b"
+    },
+    "hooks/hooks.json.example": {
+      "byte_count": 1067,
+      "sha256": "71510d7c161f64af96415e66eb892d5fd6960bebd046e41bd48c77bea1e6f762"
+    },
+    "hooks/prompt_source_core.py": {
+      "byte_count": 35955,
+      "sha256": "33aafd1e8476fc0ac0f1a72e427489a886e9671d128b6316752023d49050447d"
+    },
+    "hooks/prompt_source_hook.py": {
+      "byte_count": 194,
+      "sha256": "68892722bf72e1f2d2386bf712a44763149f1fdf882a884a92888d3bd1fcde67"
+    }
+  }
+}

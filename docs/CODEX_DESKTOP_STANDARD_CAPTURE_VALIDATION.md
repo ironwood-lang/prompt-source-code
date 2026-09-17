@@ -1,5 +1,10 @@
 # Codex Desktop Standard-Capture Validation
 
+This is the preserved Milestone 2 evidence for the standard path. The frozen version 1
+bundle was later rechecked in the separate
+[`CODEX_DESKTOP_V1_RELEASE_READINESS.md`](CODEX_DESKTOP_V1_RELEASE_READINESS.md) run;
+that later report does not alter the facts recorded here.
+
 ## Environment and scope
 
 Validation completed on 2026-09-16 in Codex Desktop 26.908.70816 (9275) on macOS

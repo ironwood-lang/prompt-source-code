@@ -37,6 +37,18 @@ UNCERTAIN_DEDUPLICATION_NOTE = (
     "Identity with a hook-created observation could not be established safely; "
     "both observations were preserved."
 )
+REQUIRED_ENTRY_FIELDS = ("Interaction", "Status", "Capture method")
+OPTIONAL_ENTRY_FIELDS = (
+    "Observed at",
+    "Session ID",
+    "Turn ID",
+    "Model",
+    "Agent observation",
+    "Deduplication note",
+    "Continues",
+    "Supersedes",
+    "Status reason",
+)
 
 
 class PromptSourceError(Exception):
@@ -267,6 +279,19 @@ def _metadata(block: str) -> dict[str, str]:
         if key in fields:
             raise HistoryConflict(f"entry contains duplicate metadata field {key!r}")
         fields[key] = value
+    keys = list(fields)
+    if tuple(keys[: len(REQUIRED_ENTRY_FIELDS)]) != REQUIRED_ENTRY_FIELDS:
+        raise HistoryConflict("entry required metadata is missing or out of order")
+    allowed = set(REQUIRED_ENTRY_FIELDS) | set(OPTIONAL_ENTRY_FIELDS)
+    unknown = [key for key in keys if key not in allowed]
+    if unknown:
+        raise HistoryConflict(f"entry contains unrecognized metadata field {unknown[0]!r}")
+    optional_ranks = [
+        OPTIONAL_ENTRY_FIELDS.index(key)
+        for key in keys[len(REQUIRED_ENTRY_FIELDS) :]
+    ]
+    if optional_ranks != sorted(optional_ranks):
+        raise HistoryConflict("entry optional metadata fields are out of order")
     return fields
 
 
@@ -390,7 +415,7 @@ def validate_history(text: str) -> list[Entry]:
             end = len(text)
         block = text[start:end]
         fields = _metadata(block)
-        for name in ("Interaction", "Status", "Capture method"):
+        for name in REQUIRED_ENTRY_FIELDS:
             if name not in fields:
                 raise HistoryConflict(f"Entry {number:06d} lacks required field {name!r}")
         if fields["Interaction"] not in {
@@ -408,6 +433,20 @@ def validate_history(text: str) -> list[Entry]:
             raise HistoryConflict(f"Entry {number:06d} has an invalid Agent observation")
         if fields.get("Agent observation") is not None and fields["Capture method"] != "Hook-assisted":
             raise HistoryConflict("Agent observation is valid only on Hook-assisted entries")
+        if fields.get("Deduplication note") not in {
+            None,
+            UNCERTAIN_DEDUPLICATION_NOTE,
+        }:
+            raise HistoryConflict("Deduplication note is not the canonical safe-preservation note")
+        for name in ("Continues", "Supersedes"):
+            if name not in fields:
+                continue
+            match = re.fullmatch(r"Entry (\d{6,})", fields[name])
+            if match is None:
+                raise HistoryConflict(f"Entry {number:06d} has an invalid {name} reference")
+            target = int(match.group(1))
+            if match.group(1) != f"{target:06d}" or target >= number or target not in numbers:
+                raise HistoryConflict(f"Entry {number:06d} has a non-backward {name} reference")
         if fields["Capture method"] == "Hook-assisted":
             if fields.get("Agent observation") is None:
                 raise HistoryConflict(
@@ -427,6 +466,16 @@ def validate_history(text: str) -> list[Entry]:
                 raise HistoryConflict("Interrupted entries must be Hook-assisted")
             if fields.get("Status reason") != INTERRUPT_REASON:
                 raise HistoryConflict("Interrupted entry lacks the canonical hook reason")
+        entry_outside, _ = _outside_fence_lines(block)
+        result_count = sum(
+            line.rstrip("\r\n") == "### Result" for _, line in entry_outside
+        )
+        if fields["Status"] == "Completed" and result_count != 1:
+            raise HistoryConflict("Completed entries must contain exactly one Result section")
+        if fields["Status"] == "In progress" and result_count != 0:
+            raise HistoryConflict("In progress entries cannot contain a Result section")
+        if fields["Status"] in {"Incomplete", "Interrupted"} and result_count > 1:
+            raise HistoryConflict("terminal unfinished entries may contain at most one Result section")
         prompt, final_newline = _decode_payload(
             block,
             require_integrity=fields["Capture method"] == "Hook-assisted",
@@ -719,11 +768,11 @@ def replace_entry(root: Path, request: dict[str, Any]) -> Entry:
             raise NoReliableMatch("replacement identifiers do not match the current entry")
         if current.prompt.encode("utf-8") != _utf8_bytes(prompt, "prompt_utf8_base64"):
             raise NoReliableMatch("replacement prompt bytes do not match the current entry")
-        candidate_history = HEADER + "\n" + replacement
-        candidate_entries = validate_history(candidate_history)
-        if len(candidate_entries) != 1 or candidate_entries[0].number != number:
+        updated = history[: current.start] + replacement + history[current.end :]
+        updated_entries = validate_history(updated)
+        if [entry.number for entry in updated_entries] != [entry.number for entry in entries]:
             raise HistoryConflict("replacement must be exactly the same structural entry")
-        candidate = candidate_entries[0]
+        candidate = next(entry for entry in updated_entries if entry.number == number)
         if candidate.fields["Capture method"] != current.fields["Capture method"]:
             raise HistoryConflict("Capture method is immutable")
         if _entry_identity(candidate) != _entry_identity(current):
@@ -744,8 +793,6 @@ def replace_entry(root: Path, request: dict[str, Any]) -> Entry:
             raise HistoryConflict(f"terminal status {old_status!r} cannot be replaced")
         if new_status == "Interrupted" and old_status != "Interrupted":
             raise HistoryConflict("only the Interrupt hook may create Interrupted status")
-        updated = history[: current.start] + replacement + history[current.end :]
-        updated_entries = validate_history(updated)
         _atomic_write(history_path, updated)
         return next(entry for entry in updated_entries if entry.number == number)
 

@@ -16,6 +16,10 @@ README = ROOT / "README.md"
 MANUAL = ROOT / "docs" / "MANUAL_CODEX_DESKTOP_VALIDATION.md"
 ROADMAP = ROOT / "docs" / "ROADMAP.md"
 OPTIONAL_HOOKS = ROOT / "docs" / "OPTIONAL_HOOKS.md"
+INSTALLATION = ROOT / "docs" / "INSTALLATION.md"
+COMPATIBILITY = ROOT / "docs" / "COMPATIBILITY.md"
+READINESS = ROOT / "docs" / "CODEX_DESKTOP_V1_RELEASE_READINESS.md"
+RELEASE_MANIFEST = ROOT / "tests" / "fixtures" / "release-manifest.json"
 
 SCHEMA_MARKER = "<!-- prompt-source-schema: 1 -->"
 HEADER = """<!-- prompt-source-schema: 1 -->
@@ -423,6 +427,9 @@ class FormatFixtureTests(unittest.TestCase):
             "Deduplication note",
             "Never relabel an instruction-created entry as `Hook-assisted`",
             "absent, disabled, untrusted, unavailable, or failed",
+            "unrecognized or out-of-order entry metadata",
+            "unsupported/future schema marker",
+            "Completed, incomplete, and interrupted states are terminal",
         ]
         for phrase in required_phrases:
             self.assertIn(" ".join(phrase.split()), normalized_template)
@@ -478,18 +485,104 @@ class FormatFixtureTests(unittest.TestCase):
         for phrase in required_manual:
             self.assertIn(" ".join(phrase.split()), manual)
 
-    def test_markdown_fences_and_navigation_links_are_valid(self):
+    def test_format_freeze_and_compatibility_policy_are_explicit(self):
+        spec = " ".join(SPEC.read_text(encoding="utf-8").split())
+        compatibility = " ".join(COMPATIBILITY.read_text(encoding="utf-8").split())
+        required_spec = [
+            "frozen, normative PromptSourceCode schema-1 contract",
+            "The integer is the storage-format compatibility version",
+            "Schema 1 is a closed contract",
+            "permitted status transitions",
+            "Ordering, concurrency, and crash-safety guarantees",
+            "Invalid, truncated, incompatible, and future histories",
+            "numbering gap by itself is valid",
+            "Future PromptSourceCode compatibility",
+        ]
+        required_compatibility = [
+            "Format compatibility",
+            "Capture-environment support",
+            "Codex Desktop 26.908.70816 (9275)",
+            "Codex Desktop 26.911.61220 (9647)",
+            "`/usr/bin/python3` 3.9.6",
+            "does not claim capture-environment support",
+            "Do not rewrite, renumber, normalize, or recreate existing schema-1 entries",
+            "Modifying a command or handler property invalidates the prior decision",
+            "Version 1 makes no promise that such a tool exists",
+        ]
+        for phrase in required_spec:
+            self.assertIn(" ".join(phrase.split()), spec)
+        for phrase in required_compatibility:
+            self.assertIn(" ".join(phrase.split()), compatibility)
+
+    def test_installation_guide_covers_the_complete_user_lifecycle(self):
+        guide = " ".join(INSTALLATION.read_text(encoding="utf-8").split())
+        required = [
+            "Install standard capture in a new project",
+            "Add standard capture to an existing `AGENTS.md`",
+            "Verify the first capture",
+            "Update the standard instruction block",
+            "Disable and re-enable standard capture",
+            "Remove the standard instructions",
+            "Optionally install the inert hook files",
+            "Review and trust each hook explicitly",
+            "Update, disable, re-enable, or remove the hooks",
+            "Diagnose hook failures without losing the fallback",
+            "Understand Git behavior",
+            "Upgrade an earlier installation",
+            "The tested CLI did not display raw trust hashes",
+            "modifying a command or handler property invalidates the prior decision",
+            "Codex CLI only for hook review and trust",
+            "Never bypass hook trust",
+        ]
+        for phrase in required:
+            self.assertIn(" ".join(phrase.split()), guide)
+
+    def test_copyable_release_assets_match_the_frozen_manifest(self):
+        manifest = json.loads(RELEASE_MANIFEST.read_text(encoding="utf-8"))
+        self.assertEqual(manifest["prompt_source_schema"], 1)
+        self.assertEqual(manifest["release"], "version 1")
+        expected_paths = {
+            "templates/AGENTS.prompt-source-standard.md",
+            "hooks/hooks.json.example",
+            "hooks/prompt_source_core.py",
+            "hooks/prompt_source_hook.py",
+        }
+        self.assertEqual(set(manifest["files"]), expected_paths)
+        for relative, expected in manifest["files"].items():
+            payload = (ROOT / relative).read_bytes()
+            self.assertEqual(len(payload), expected["byte_count"], relative)
+            self.assertEqual(hashlib.sha256(payload).hexdigest(), expected["sha256"], relative)
+
+    def test_release_readiness_report_exists_and_does_not_claim_publication(self):
+        report = " ".join(READINESS.read_text(encoding="utf-8").split())
+        for phrase in (
+            "Version 1 Release Readiness",
+            "Disposable project isolation",
+            "Case-by-case outcomes",
+            "Automated validation",
+            "Final storage topology",
+            "Defects found and resolutions",
+            "Ready for an explicitly authorized tag",
+            "No version tag, GitHub release, or package publication was created",
+        ):
+            self.assertIn(" ".join(phrase.split()), report)
+
+    def test_markdown_fences_and_internal_links_are_valid(self):
         for path in ROOT.rglob("*.md"):
             self.assertTrue(
                 markdown_fences_balanced(path.read_text(encoding="utf-8")),
                 f"Unbalanced Markdown fence in {path}",
             )
 
-        for path in (README, ROADMAP):
+        authored_docs = [*ROOT.glob("*.md"), *sorted((ROOT / "docs").glob("*.md"))]
+        authored_docs.append(TEMPLATE)
+        for path in authored_docs:
             text = path.read_text(encoding="utf-8")
-            for target in re.findall(r"\[[^\]]+\]\(([^)]+)\)", text):
+            outside_text = "".join(line for _, line in outside_fence_lines(text))
+            for target in re.findall(r"\[[^\]]+\]\(([^)]+)\)", outside_text):
                 if target.startswith(("http://", "https://", "#")):
                     continue
+                target = target.strip("<>").split("#", 1)[0]
                 resolved = (path.parent / target).resolve()
                 self.assertTrue(resolved.exists(), f"Broken local link in {path}: {target}")
 

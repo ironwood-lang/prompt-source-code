@@ -12,6 +12,10 @@ agent work under the standard instructions. Temporary atomic-write files exist o
 a replacement is active. Serialization locks the existing project directory itself, so
 there is no persistent lock, event log, status file, or diagnostic file.
 
+The reviewed copyable files and their exact byte counts and SHA-256 digests are frozen in
+[`../tests/fixtures/release-manifest.json`](../tests/fixtures/release-manifest.json).
+Copying them into `.codex/` does not enable either definition and does not grant trust.
+
 ## Install explicitly
 
 First install the final standard block from
@@ -74,6 +78,11 @@ trust the changed definition again, then restart Desktop. Never use
 recommend a trust bypass. Codex CLI is not a supported PromptSourceCode capture
 environment; it is used here only because `/hooks` supplies the required review-and-trust
 workflow.
+
+The current official [Codex hooks documentation](https://developers.openai.com/codex/hooks)
+describes project-local discovery, hash-bound trust, and `/hooks` review. These release
+instructions remain limited to behavior exercised by PromptSourceCode's Desktop
+validation.
 
 ## Runtime behavior
 
@@ -193,6 +202,10 @@ To update, disable both definitions, replace the two Python files and the two re
 configuration groups from a trusted PromptSourceCode version, review and trust the new
 hash-bound definitions separately through `/hooks`, and restart Desktop. Re-enabling
 without a definition change still requires a Desktop restart before validation.
+
+Before an update writes to an existing history, confirm that its first line is the exact
+schema-1 marker. A missing, malformed, incompatible, or future marker is not upgraded by
+the hook; preserve the history and follow [`COMPATIBILITY.md`](COMPATIBILITY.md).
 
 To remove the enhancement, disable both definitions, restart Desktop, remove only the
 PromptSourceCode `UserPromptSubmit` and `Interrupt` groups from `.codex/hooks.json`, and

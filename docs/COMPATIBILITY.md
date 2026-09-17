@@ -1,0 +1,105 @@
+# Version 1 Compatibility and Upgrade Policy
+
+## Two different compatibility questions
+
+**Format compatibility** asks whether a reader or writer understands the bytes and
+semantics of a `PROMPT_SOURCE.md` history. **Capture-environment support** asks whether a
+particular Codex host, operating system, filesystem, Python runtime, and Git workflow have
+been exercised end to end. A format-compatible history does not imply that every
+environment is supported for live capture.
+
+## Version 1 format compatibility
+
+Version 1 histories begin with the exact first line:
+
+```text
+<!-- prompt-source-schema: 1 -->
+```
+
+Schema 1 is frozen by [`PROMPT_SOURCE_FORMAT.md`](PROMPT_SOURCE_FORMAT.md). A compatible
+version 1 implementation must preserve existing entry order, immutable captured fields,
+artifact bytes, and the two-output storage topology. Missing entry numbers remain missing;
+valid histories are never renumbered merely to become contiguous.
+
+The schema number is the format compatibility boundary, not the PromptSourceCode product
+release number. Documentation clarifications, test additions, and implementation fixes
+may remain schema 1 only when they do not change the interpretation of valid version 1
+bytes or make a valid version 1 history invalid. A change to required topology, field
+meaning, payload reconstruction, lifecycle semantics, or artifact fidelity requires a
+new schema marker and explicit migration guidance.
+
+Writers must stop without modifying a history that has an absent, malformed, truncated,
+incompatible, or future schema marker. They also stop on malformed fences, duplicate or
+non-increasing structural headings, stale optimistic digests, and other structural
+conflicts. Version 1 never treats an unknown schema as an empty history and never silently
+upgrades it.
+
+## Tested capture environments
+
+Release evidence establishes the following environments:
+
+| Path | Tested environment | Evidence |
+| --- | --- | --- |
+| Standard capture | Codex Desktop 26.908.70816 (9275), macOS 26.6.2 (25G83), local Git project | [Milestone 2 validation](CODEX_DESKTOP_STANDARD_CAPTURE_VALIDATION.md) |
+| Optional hooks | Codex Desktop 26.911.61220 (9647), macOS 26.6.2 (25G83), `/usr/bin/python3` 3.9.6, local Git project | [Milestone 3 validation](CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md) |
+| Final version 1 bundle | Codex Desktop / ChatGPT app 26.911.61220 (9647), macOS 26.6.2 (25G83), `/usr/bin/python3` 3.9.6, Git 2.54.0 (Apple Git-157), local Git project | [Version 1 release readiness](CODEX_DESKTOP_V1_RELEASE_READINESS.md) |
+
+Standard capture has no Python runtime dependency. The optional implementation is tested
+with the system Python listed above and uses macOS/POSIX file locking and atomic local
+filesystem replacement. Git is used for the captured project's ordinary workflow and
+project discovery; hooks themselves execute no Git commands.
+
+These results support PromptSourceCode version 1 for the tested local Codex Desktop on
+macOS workflow. They do not claim that every later Desktop, macOS, Python, or Git version
+behaves identically.
+
+## Untested environments and version 1 non-goals
+
+Version 1 does not claim capture-environment support for:
+
+- Codex CLI, except using `/hooks` to review, enable, disable, and trust optional hooks;
+- the Codex IDE extension, Codex cloud, ChatGPT cloud tasks, or remote capture;
+- Windows, Linux, network filesystems, or filesystems without the tested POSIX locking and
+  atomic-replacement behavior;
+- Claude Code or any other coding agent;
+- a skill, plugin, background service, or network service as a required capture path; or
+- automatic publication or synchronization of generated provenance.
+
+A version 1 history may still be readable on an untested platform. That is format
+compatibility, not evidence of supported live capture.
+
+## Upgrade within schema 1
+
+To update standard capture, replace the complete marked block in the project-root
+`AGENTS.md` with the new
+[`AGENTS.prompt-source-standard.md`](../templates/AGENTS.prompt-source-standard.md). Keep
+all unrelated instructions. If capture was disabled, restore that state after replacing
+the block unless re-enabling is intentional.
+
+Do not rewrite, renumber, normalize, or recreate existing schema-1 entries. Preserve
+`PROMPT_SOURCE.md` and all verified files in `prompt_source_assets/`. New captures append
+after the greatest valid structural entry number.
+
+For optional hooks:
+
+1. disable both definitions and restart Desktop;
+2. replace both Python files and the two configuration groups from the reviewed release;
+3. review, enable, and trust `UserPromptSubmit` and `Interrupt` separately through CLI
+   `/hooks`; and
+4. fully restart Desktop before testing in a new Desktop task.
+
+Modifying a command or handler property invalidates the prior decision because any
+definition edit changes the hash-bound trust decision. The tested CLI may not display the
+raw hash; review the exact definition and do not invent a hash or bypass trust.
+
+## Encountering another schema
+
+If the first line is not `<!-- prompt-source-schema: 1 -->`, preserve the history and its
+assets unchanged and stop version 1 writes. Determine which PromptSourceCode version owns
+that schema before taking further action. Do not prepend a version 1 header, copy entries
+into a new file, or reuse version 1 hook helpers against the unknown history.
+
+A future PromptSourceCode release may provide explicit migration instructions or a
+separately validated migration tool. Version 1 makes no promise that such a tool exists
+and performs no automatic migration. Any future migration must preserve the original
+history and artifacts until the user deliberately accepts a documented conversion.

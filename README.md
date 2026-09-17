@@ -10,7 +10,7 @@ The goal is to make that history part of the project's source and provenance, so
 can understand not only what the code became, but also the human instructions, context,
 and decisions that shaped it.
 
-## Version 1 Direction
+## Version 1 Architecture
 
 Version 1 targets Codex Desktop.
 
@@ -56,7 +56,7 @@ they entered the clipboard.
 
 ## Project Status
 
-Milestones 2 and 3 are complete. Standard capture was validated from the first prompt in
+Milestones 1 through 4 are complete. Standard capture was validated from the first prompt in
 a clean disposable local Git project with no hook, skill, plugin, background service, or
 network dependency. Its release-candidate run covered follow-ups, in-turn steering,
 corrections, no-change work, artifacts, real Stop-button recovery, lifecycle controls,
@@ -69,16 +69,21 @@ identical prompts, agent enrichment without duplication, correction, artifact en
 a real trusted `Interrupt`, guarded hook failure with standard fallback, concurrent and
 failure-injected writes, Git isolation, and standard capture after both hooks were
 disabled. Defects found during the run were preserved as evidence and hardened before the
-final cases. Version 1 release hardening remains Milestone 4 work.
+final cases. The frozen version 1 bundle then passed the final clean-project acceptance
+run. It is ready for a separately authorized tag and publication; no tag or release
+artifact has been created.
 
 See:
 
+- [Install, update, disable, remove, and troubleshoot](docs/INSTALLATION.md)
 - [Canonical format](docs/PROMPT_SOURCE_FORMAT.md)
+- [Compatibility and upgrade policy](docs/COMPATIBILITY.md)
 - [Installable standard-capture instructions](templates/AGENTS.prompt-source-standard.md)
 - [Optional hook installation and trust](docs/OPTIONAL_HOOKS.md)
 - [Manual Codex Desktop validation checklist](docs/MANUAL_CODEX_DESKTOP_VALIDATION.md)
 - [Standard-capture release-candidate evidence](docs/CODEX_DESKTOP_STANDARD_CAPTURE_VALIDATION.md)
 - [Optional-hook capture evidence](docs/CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md)
+- [Version 1 release-readiness evidence](docs/CODEX_DESKTOP_V1_RELEASE_READINESS.md)
 - [Codex Desktop capture experiment](docs/CODEX_DESKTOP_CAPTURE_EXPERIMENT.md)
 - [Implementation roadmap](docs/ROADMAP.md)
 
@@ -93,6 +98,9 @@ python3 -m unittest discover -s tests -v
 ```
 
 ## Standard Capture Lifecycle
+
+The concise end-to-end procedure is in [`docs/INSTALLATION.md`](docs/INSTALLATION.md).
+The summary below keeps the standard path visible at the repository front door.
 
 ### Install in a new or existing project
 

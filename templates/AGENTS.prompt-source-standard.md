@@ -114,7 +114,11 @@ Before acting on each user interaction:
 
 2. If the file exists, verify that its first line is exactly
    `<!-- prompt-source-schema: 1 -->`. Do not overwrite or silently upgrade a file with a
-   different marker.
+   different marker. Treat an existing empty file, invalid UTF-8, malformed or truncated
+   payload, unclosed or noncanonical fence, unrecognized or out-of-order entry metadata,
+   duplicate or non-increasing structural heading, or unsupported/future schema marker as
+   a conflict. Preserve its bytes, report the problem, and do not append, repair, or
+   migrate it.
 3. Re-read the structural entry headings outside fenced payloads. Choose one more than
    the greatest `## Entry NNNNNN` number, padded to at least six digits; never treat a
    heading-like line inside user input or runtime context as structure, count entries,
@@ -164,7 +168,8 @@ reasons unless they are reliably available. When present, optional entry fields 
 `Model` as JSON strings; hook-only `Agent observation`; `Deduplication note`; `Continues`;
 `Supersedes`; and `Status reason`. Omit unavailable fields unless the absence itself
 matters; then use `Unavailable` or a factual explanation. Standard capture normally omits
-session IDs, turn IDs, models, and `Agent observation`.
+session IDs, turn IDs, models, and `Agent observation`. This metadata field set and order
+are closed for schema 1; do not delete, reorder, or guess at an unrecognized field.
 
 ### Preserve user input
 
@@ -290,6 +295,11 @@ Use exactly these states:
 - `Incomplete`: work did not finish and no reliable hook-confirmed interruption exists.
 - `Interrupted`: only an explicitly enabled hook reliably reported an `Interrupt` event
   for the matching turn.
+
+The permitted transitions are `In progress` to `Completed`, `Incomplete`, or trusted
+hook-created `Interrupted`. Remaining `In progress` while verified initial metadata is
+added is also valid. Completed, incomplete, and interrupted states are terminal and may
+never transition to another state or back to `In progress`.
 
 When a steering message or correction arrives during active work, create its separate
 `In progress` entry before following it. Do not mark related entries incomplete merely

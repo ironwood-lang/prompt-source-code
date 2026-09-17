@@ -82,7 +82,8 @@ single-physical-line pasted-image fidelity field. A post-run cross-task test als
 ambiguous insertion after repeated result text; the contract now requires EOF-only append,
 physical-order verification, and bounded repair of only a newly misplaced unfinished
 block before task work. Optional hook work was subsequently completed in Milestone 3;
-version 1 release hardening and tagging remain Milestone 4 work.
+version 1 release hardening was subsequently completed in Milestone 4. Tagging and
+publishing remain pending explicit authorization.
 
 ## Milestone 3: Optional Hook Enhancement
 
@@ -124,7 +125,7 @@ recorded in
 
 ## Milestone 4: Version 1 Release
 
-**Status:** Not started
+**Status:** Complete
 
 - Freeze the format with an explicit schema/version marker.
 - Finish concise installation and troubleshooting documentation.
@@ -132,6 +133,18 @@ recorded in
 - Add upgrade and compatibility notes.
 - Run the complete clean-project acceptance checklist in Codex Desktop.
 - Tag and publish only after an explicit user request.
+
+Completed on 2026-09-17 using the frozen release bundle in a fresh disposable local Git
+project. The run covered the complete standard lifecycle, inert optional assets, separate
+hook review and trust, trusted exact capture, one-to-one matching, a real interruption,
+guarded failure, disabled-hook fallback, final structural validation, and generated-file
+Git isolation while ordinary project files retained normal commit and push behavior.
+
+The format freeze, environment, case results, hashes, limitations, and release decision
+are recorded in
+[`CODEX_DESKTOP_V1_RELEASE_READINESS.md`](CODEX_DESKTOP_V1_RELEASE_READINESS.md). The
+repository is ready for an explicitly authorized version 1 tag; no tag, GitHub release,
+package publication, or other release artifact was created as part of this milestone.
 
 ## Version 1 Non-goals
 
