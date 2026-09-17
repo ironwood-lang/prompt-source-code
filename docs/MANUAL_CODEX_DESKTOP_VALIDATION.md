@@ -4,6 +4,10 @@ Use this checklist for behavior that fixture tests cannot prove. Run it only in 
 disposable project outside the PromptSourceCode repository. Do not enable capture in the
 PromptSourceCode development repository.
 
+For the exact Milestone 6 developer procedure, including prepared inputs, copyable prompts,
+UI actions, checkpoints, and the final validation command, use
+[`MILESTONE_6_CODEX_DESKTOP_ACCEPTANCE.md`](MILESTONE_6_CODEX_DESKTOP_ACCEPTANCE.md).
+
 Milestone 2 completed the standard-path checklist and Milestone 3 completed the optional
 hook checklist in their tested Desktop environments. See
 [`CODEX_DESKTOP_STANDARD_CAPTURE_VALIDATION.md`](CODEX_DESKTOP_STANDARD_CAPTURE_VALIDATION.md)

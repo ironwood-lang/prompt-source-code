@@ -193,27 +193,25 @@ deterministic tests and 80 repeated concurrency/failure-injection invocations.
   root and nested guidance under Codex's default project-instruction limit.
 - Choose and freeze the dedicated file's canonical project-relative path and define how
   the loader coexists with a project's existing `AGENTS.md` instructions.
-- Keep the loader independent of user-specific fallback filenames, global Codex
-  configuration, skills, plugins, hooks, background services, and network access.
+- Preserve the standard path's existing independence from user-specific fallback
+  filenames, global Codex configuration, skills, plugins, hooks, background services,
+  and network access while reducing its instruction footprint.
 - Validate that Codex Desktop reads the dedicated file before capture begins in new tasks,
   including tasks opened at the repository root and work governed by nested instruction
   files.
 - Define conservative behavior when the loader or dedicated file is missing, unreadable,
   stale, conflicting, or truncated, without deleting or rewriting captured history.
-- Preserve the full-inline 0.1.0 installation as a compatible capture path and provide a
-  deliberate upgrade procedure that does not rewrite existing `PROMPT_SOURCE.md` history
-  or `prompt_source_assets/` artifacts.
 - Update installation, updating, disabling, re-enabling, removal, troubleshooting, and
   compatibility documentation for the loader-based layout.
 - Add deterministic tests for loader markers, path consistency, instruction-size budgets,
-  upgrade safety, inert optional hooks, and the absence of PromptSourceCode-specific global
-  configuration.
+  inert optional hooks, and the absence of PromptSourceCode-specific global configuration.
 - Test a representative project with substantial existing root and nested instructions and
   verify that PromptSourceCode neither truncates nor displaces the project's guidance under
   default Codex configuration. Record before-and-after line, word, and byte counts.
-- Run a fresh clean-project Codex Desktop acceptance test demonstrating that the compact
-  loader produces the same standard-capture behavior as the full inline contract before
-  recommending the new layout in the README.
+- Execute the complete developer-run
+  [`MILESTONE_6_CODEX_DESKTOP_ACCEPTANCE.md`](MILESTONE_6_CODEX_DESKTOP_ACCEPTANCE.md)
+  script in a fresh project and pass its deterministic validator before recommending the
+  new layout in the README.
 
 **Exit criterion:** A new user can keep only a small PromptSourceCode loader block in the
 project-root `AGENTS.md`, keep the complete capture instructions in the documented
@@ -221,7 +219,7 @@ dedicated project file, and obtain the same validated standard-capture behavior 
 per-user Codex configuration. The complete always-read instruction set is substantially
 smaller than the 0.1.0 baseline, satisfies its enforced size budgets, and coexists with
 representative existing project guidance without truncation. Existing 0.1.0 installations
-and captured histories remain valid and require no rewriting.
+are pre-1.0 experiments and do not impose an upgrade-compatibility requirement.
 
 ## 0.1.0 Non-goals
 
