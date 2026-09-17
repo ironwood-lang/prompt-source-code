@@ -15,7 +15,7 @@ repository.
 - `release-manifest.json` preserves the exact 0.1.0 release-asset record, including the
   superseded full-inline template hash.
 - `distribution-manifest.json` freezes the current loader, dedicated instructions,
-  standard-library installer, and unchanged optional hook assets.
+  standard-library installer, shared capture/validation helper, and optional hook assets.
 
 There is intentionally no `prompt_source_assets/` fixture directory. The expected
 history models its flat repository-relative references while the test suite checks the

@@ -94,10 +94,13 @@ file reusable and unchecked for future regression runs.
 - [ ] Starting from the enabled final loader, dedicated file, and validator, complete an
   ordinary standard capture and record the history byte count and SHA-256.
 - [ ] Change only the control line to `- Capture: disabled`, then submit a new Desktop
-  interaction. Confirm the history and assets remain byte-for-byte unchanged.
+  interaction in the same task. Confirm the helper reports disabled and the history and
+  assets remain byte-for-byte unchanged.
 - [ ] Change only the control line back to `- Capture: enabled`, submit another
   interaction, and confirm capture resumes at physical EOF after the greatest structural
   entry number without rewriting older entries.
+- [ ] Open a separate nested-project task sharing that history; confirm its first
+  submission is `Initial prompt` even though the root history already contains entries.
 - [ ] Confirm removing the loader, dedicated file, and validator is documented as stopping
   future standard capture without silently deleting existing history. Do not delete
   validation evidence merely to exercise that documented behavior.

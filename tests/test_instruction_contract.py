@@ -31,7 +31,7 @@ class InstructionContractTests(unittest.TestCase):
         self.assertEqual(instructions.splitlines()[-1], contract.INSTRUCTIONS_END)
         self.assertIn(f"`{contract.VALIDATE_HISTORY_COMMAND}`", instructions)
         self.assertIn("git rev-parse --show-toplevel", loader)
-        self.assertIn("never the current or nested directory", loader)
+        self.assertIn("never the current or nested directory", " ".join(loader.split()))
         normalized_instructions = " ".join(instructions.split())
         self.assertIn("Desktop attachment/paste envelope", normalized_instructions)
         self.assertIn(

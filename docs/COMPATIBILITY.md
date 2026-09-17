@@ -47,7 +47,8 @@ Release evidence establishes the following environments:
 | Optional hooks | Codex Desktop 26.911.61220 (9647), macOS 26.6.2 (25G83), `/usr/bin/python3` 3.9.6, local Git project | [Milestone 3 validation](CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md) |
 | Final 0.1.0 bundle | Codex Desktop / ChatGPT app 26.911.61220 (9647), macOS 26.6.2 (25G83), `/usr/bin/python3` 3.9.6, Git 2.54.0 (Apple Git-157), local Git project | [0.1.0 release readiness](CODEX_DESKTOP_V1_RELEASE_READINESS.md) |
 
-Standard capture has no Python runtime dependency. The optional implementation is tested
+The historical 0.1.0 standard capture had no Python runtime dependency. The Milestone 6
+candidate requires the system Python for its project-local capture helper. The optional implementation is tested
 with the system Python listed above and uses macOS/POSIX file locking and atomic local
 filesystem replacement. Git is used for the captured project's ordinary workflow and
 project discovery; hooks themselves execute no Git commands.
@@ -85,6 +86,11 @@ loader, every nested `AGENTS.md`, and existing schema-1 provenance.
 If capture was disabled, restore that state after the update unless re-enabling is
 intentional. The layout uses no user-specific global Codex configuration, fallback
 filename, skill, plugin, hook, service, or network dependency.
+
+Start a new Desktop task after updating so it receives the current loader. Subsequent
+enable/disable changes are reread from disk on each submission. A reliably exposed
+`CODEX_THREAD_ID` may populate schema 1's existing optional `Session ID`; it is not
+hook-only metadata. Older entries without that value remain unchanged and valid.
 
 Do not rewrite, renumber, normalize, or recreate existing schema-1 entries. Preserve
 `PROMPT_SOURCE.md` and all verified files in `prompt_source_assets/`. New captures append

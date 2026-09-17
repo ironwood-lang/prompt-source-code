@@ -10,8 +10,8 @@ PromptSourceCode targets Codex Desktop and provides two capture layers:
 
 1. **Standard capture:** a small marked loader in the root `AGENTS.md` reads the complete
    operational contract from `.prompt-source/instructions-v1.md` before capture or task
-   work. A project-local `.prompt-source/validate.py` checks schema-1 history before work
-   and finalization. This required default works without global Codex configuration, hooks,
+   work. A project-local `.prompt-source/validate.py` rereads capture state, creates entries,
+   finalizes results, and checks schema-1 history. This required default works without global Codex configuration, hooks,
    skills, plugins, background services, or network access.
 2. **Hook-assisted capture:** an explicitly enabled optional enhancement using
    `UserPromptSubmit` and `Interrupt`. Hooks improve prompt fidelity, identify mid-turn
@@ -96,9 +96,33 @@ contributor guidance and must not be copied into an end-user project.
 
 The installer also copies the shared standard-library schema module from
 [`../hooks/prompt_source_core.py`](../hooks/prompt_source_core.py) to
-`.prompt-source/validate.py`. The standard contract invokes only its read-only
-`--validate-history` mode. The installed file is not configured as a hook, does not
-activate hooks, and performs no network or Git operation during validation.
+`.prompt-source/validate.py`. The standard contract uses `--capture-state`,
+`--begin-standard`, `--finish-standard`, and the read-only `--validate-history` mode. The
+installed file is not configured as a hook, does not activate hooks, and performs no
+network or Git operation.
+When invoked as the installed `.prompt-source/validate.py`, its standard commands locate
+the root from that file's location, so an absolute invocation from a nested cwd is safe.
+
+The state check verifies the exact marked loader, rereads its current enabled/disabled
+control, and verifies the dedicated instruction bytes only when enabled. Entry creation
+and completion repeat that check under the existing directory lock. Disabled or invalid
+installations therefore cannot write through these commands. The helper initializes the
+header, chooses canonical fences, allocates numbers, and atomically writes text; the
+agent still supplies the delivered prompt and factual results.
+
+`first_in_task` describes the current conversation, not whether the shared history exists.
+When the runtime exposes `CODEX_THREAD_ID`, the helper copies it into the existing schema-1
+`Session ID` field and rejects contradictory task associations. It does not create an ID,
+query global configuration, or read a transcript during capture. If earlier submissions
+in the same task were not captured, the agent must explicitly supply
+`uncaptured_predecessor: true`; an empty task history alone cannot establish that this is
+the first user submission. Without the runtime identifier, classification uses the
+agent-supplied conversation context. These facts do not make model-mediated text capture
+deterministic.
+
+Artifact/context enrichment remains agent work. The helper's serialized text writes do
+not make arbitrary direct edits or artifact copies transactional. The standard path still
+requires model compliance with the instructions.
 
 The canonical project path and instruction marker are versioned independently of storage
 schema. The loader is 300 words/2,048 bytes maximum, the dedicated contract is 900
@@ -165,6 +189,16 @@ migrated. See [`COMPATIBILITY.md`](COMPATIBILITY.md) for the tested environment 
 policy.
 
 ## Contributor validation
+
+Acceptance compares captured text with exported Desktop `userMessage` records. Clipboard
+fixtures establish what to submit, but cannot establish what Desktop delivered. The
+validator matches case labels before comparing content, preserving separate observations
+for deliberately repeated H03 prompts. A missing or extra entry cannot shift later cases.
+Exports live outside the captured project and are used only by the developer's validator;
+they are never a standard-capture runtime dependency. See the
+[acceptance runbook](MILESTONE_6_CODEX_DESKTOP_ACCEPTANCE.md) for historical replay.
+The [2026-09-17 recovery audit](MILESTONE_6_RECOVERY_20260917.md) records the preserved
+Desktop failures, corrected validator findings, and deterministic repair results.
 
 Run the deterministic contract checks with:
 

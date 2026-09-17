@@ -8,6 +8,12 @@ the preparation command refuses to reuse an existing path.
 Do not mark Milestone 6 complete from automated tests alone. The developer must perform
 the Desktop actions, record factual results, and pass the final validator.
 
+The completed `PSC_M6_ACCEPTANCE_20260917_FINAL_02` run is preserved evidence. Do not
+repeat S01–S14 there or update its installed candidate. The developer can audit its
+existing Desktop messages using section 7; a failing case does not require repeating
+unaffected cases. Focused regression checks must use a separate fresh project and be
+reported separately from complete acceptance.
+
 ## 1. Prepare a fresh isolated workspace
 
 Choose a new, explicit path that has never held earlier evidence:
@@ -77,11 +83,13 @@ and create a new task manually.
 
 ## Operator checklist — follow these steps exactly
 
-The workspace and candidate installation for this run are already prepared. Open Terminal
-and run this once so every command below works even in a new shell:
+Use this checklist only after sections 1 and 2 have prepared a fresh workspace. In
+Terminal, from any folder, set the exact workspace path supplied by the developer.
+The example below is a placeholder, not an already prepared run. Repeat these exports
+whenever opening a new shell:
 
 ```sh
-export PSC_RUN_ROOT=~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_02
+export PSC_RUN_ROOT=~/Vibe/PSC_M6_ACCEPTANCE_YYYYMMDD
 export PSC_PROJECT="$PSC_RUN_ROOT/project"
 export PSC_INPUTS="$PSC_RUN_ROOT/inputs"
 export PSC_REPO=~/Vibe/PromptSourceCode
@@ -91,8 +99,8 @@ For every `pbcopy` command below: run the command, click the Codex Desktop messa
 press Command-V, and submit once. Do not edit the pasted text. Unless a step explicitly
 says to steer or press Stop, wait for Codex to finish before continuing.
 
-Use **GPT-5.6 Sol** with **Medium** thinking for every root and nested task in this run.
-Do not change model or thinking level mid-run.
+Record the model and thinking mode chosen for this run. Use the same settings for root
+and nested tasks; results apply to the settings actually tested.
 
 ### Standard capture: S01 through S13
 
@@ -154,14 +162,17 @@ Do not change model or thinking level mid-run.
 #### S06 — attach four files in one message
 
 1. In the same Desktop task, click the attachment button.
-2. Attach all four files before submitting:
+2. In Terminal print the four exact file paths:
 
-   ```text
-   ~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_02/inputs/artifacts/notes.txt
-   ~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_02/inputs/artifacts/binary.dat
-   ~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_02/inputs/artifacts/collision-a/Résumé Final ??.PNG
-   ~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_02/inputs/artifacts/collision-b/Résumé Final ??.PNG
+   ```sh
+   printf '%s\n' "$PSC_INPUTS/artifacts/notes.txt" \
+     "$PSC_INPUTS/artifacts/binary.dat" \
+     "$PSC_INPUTS/artifacts/collision-a/Résumé Final ??.PNG" \
+     "$PSC_INPUTS/artifacts/collision-b/Résumé Final ??.PNG"
    ```
+
+   For each printed path, use the attachment picker, press Command-Shift-G, paste that
+   path, press Return, and choose Open. Add all four before submitting.
 
 3. Confirm four attachment chips are visible.
 4. Run:
@@ -288,13 +299,15 @@ Do not change model or thinking level mid-run.
 
 1. Wait until S13 has finished. Leave the existing root task unchanged in the sidebar;
    there is no need to close or archive it.
-2. In Codex Desktop, add/open a **separate project** whose folder is:
+2. In Terminal copy the exact nested folder path:
 
-   ```text
-   ~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_02/project/packages/demo
+   ```sh
+   printf '%s' "$PSC_PROJECT/packages/demo" | pbcopy
    ```
 
-   Do not change the working folder of the existing root task.
+   In Codex Desktop choose Add project. In the folder picker press Command-Shift-G,
+   Command-V, Return, then Open. This adds a **separate project**; do not change the
+   working folder of the existing root task.
 3. Select that new nested project and create a brand-new task in it.
 4. Run:
 
@@ -434,11 +447,14 @@ If the operator does not consent to optional-hook testing, stop after S14:
 
 #### H08 — one attachment plus one pasted image
 
-1. In the same message, attach this file with the attachment button:
+1. In Terminal print the exact file path:
 
-   ```text
-   ~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_02/inputs/artifacts/notes.txt
+   ```sh
+   printf '%s\n' "$PSC_INPUTS/artifacts/notes.txt"
    ```
+
+   Use the attachment button, press Command-Shift-G, paste the printed path, press
+   Return, and choose Open.
 
 2. Open the paste source in Preview:
 
@@ -544,9 +560,10 @@ do not need to interpret them while operating the checklist above.
 
 ## 3. How to submit exact prompts
 
-The prepared files under `$PSC_INPUTS/prompts/` are normative. They use Markdown forms
-that Codex Desktop delivers without known rich-text normalization. Copy them without
-adding or removing a newline, paste them into Codex Desktop, and submit:
+The prepared files under `$PSC_INPUTS/prompts/` specify what to submit. Desktop may
+serialize Markdown differently before delivering it to the agent, including inserting
+blank lines. The final text comparison therefore uses exported Desktop messages, not
+the clipboard fixture. Copy each fixture, paste it into Codex Desktop, and submit:
 
 ```sh
 pbcopy < "$PSC_INPUTS/prompts/S01.txt"
@@ -892,13 +909,27 @@ temporary, diagnostic, or bytecode-cache files.
 
 ## 7. Run deterministic validation
 
+The development agent retrieves every page of the root and nested Desktop tasks through
+`read_thread`, including all `userMessage` items. Export the returned pages as a JSON
+array to `$PSC_RUN_ROOT/desktop-export.json`, outside the captured project. Keep each
+page's `thread` (including ID and cwd), `page`, and `turns` with ID, `startedAt`, `status`,
+and user-message `items`. Follow `nextCursor` until `hasMore` is false for every task.
+Do not reconstruct messages from `PROMPT_SOURCE.md`, edit their whitespace, or infer
+missing messages from the prompt fixtures. The validator unwraps only the recognized
+Desktop attachment envelope and permits only the schema's unknown final-newline boundary.
+
+The operator does not need to resubmit prompts to supply this evidence. Missing export
+data is reported as missing evidence rather than a capture-text failure. An export
+compares recorded delivery with stored text; it does not prove pre-serialization fidelity.
+
 From the PromptSourceCode checkout, run:
 
 ```sh
 python3 scripts/desktop_acceptance.py validate \
   "$PSC_PROJECT" \
   "$PSC_INPUTS/manifest.json" \
-  --instructions-relative .prompt-source/instructions-v1.md
+  --instructions-relative .prompt-source/instructions-v1.md \
+  --desktop-export "$PSC_RUN_ROOT/desktop-export.json"
 ```
 
 When the operator stops after S14 and declines all optional-hook testing, run instead:
@@ -908,12 +939,18 @@ python3 scripts/desktop_acceptance.py validate \
   "$PSC_PROJECT" \
   "$PSC_INPUTS/manifest.json" \
   --instructions-relative .prompt-source/instructions-v1.md \
+  --desktop-export "$PSC_RUN_ROOT/desktop-export.json" \
   --standard-only
 ```
 
 Successful standard-only output explicitly reports
 `Optional-hook cases S15 and H01-H11: NOT RUN` and that full Milestone 6 Desktop
 acceptance remains incomplete. Do not install hooks merely to satisfy this validator mode.
+
+For a preserved earlier run, add `--candidate-ref <recorded-source-commit>` so installed
+files are checked against the candidate actually used, rather than today's working tree.
+This is a read-only audit, not an upgrade or a waiver of capture failures. Case labels
+identify entries independently: an unexpected S12 entry cannot shift S13/S14 comparisons.
 
 The validator checks the prepared case sequence, case identity, expected capture methods
 and terminal states, correction association, generated ordinary files, artifact bytes and

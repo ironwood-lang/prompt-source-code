@@ -33,7 +33,7 @@ agent harnesses are not currently supported.
 
    This appends a small marked loader to the root `AGENTS.md` without replacing existing
    instructions and installs the capture contract at
-   `.prompt-source/instructions-v1.md` plus its project-local schema validator at
+   `.prompt-source/instructions-v1.md` plus its project-local capture helper at
    `.prompt-source/validate.py`.
 3. Review the three installed files, then open the project in Codex Desktop and start a
    new task.

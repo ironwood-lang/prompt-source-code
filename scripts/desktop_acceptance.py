@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+from collections import defaultdict, deque
 import hashlib
 import json
 from pathlib import Path
@@ -503,12 +504,113 @@ def _tracked_files(project: Path) -> set[str]:
     return {item for item in output.split("\0") if item}
 
 
+def _case_token(prompt: str) -> str | None:
+    match = re.match(r"PSC acceptance ([SH]\d{2}[A-Z]?)(?:\.|\s)", prompt)
+    return match.group(1) if match else None
+
+
+def match_case_entries(cases: list[dict[str, Any]], entries: list[core.Entry]) -> tuple[dict[str, core.Entry], list[str]]:
+    """Match labelled observations without shifting later cases after an extra/missing entry."""
+    remaining = defaultdict(deque)
+    for case in cases:
+        remaining[_case_token(case["prompt"])].append(case)
+    matched = {}
+    errors = []
+    for entry in entries:
+        token = _case_token(entry.prompt)
+        if not token or not remaining[token]:
+            errors.append(f"unexpected or duplicate capture at Entry {entry.number:06d}: {token or 'unlabelled'}")
+            continue
+        case = remaining[token].popleft()
+        if not case["captured"]:
+            errors.append(f"disabled case {case['id']} was unexpectedly captured (Entry {entry.number:06d})")
+        else:
+            matched[case["id"]] = entry
+    for case in cases:
+        if case["captured"] and case["id"] not in matched:
+            errors.append(f"missing captured case {case['id']}")
+    numbers = [matched[case["id"]].number for case in cases if case["id"] in matched]
+    if numbers != sorted(numbers):
+        errors.append("captured case order differs from the prepared sequence")
+    return matched, errors
+
+
+def read_desktop_export(path: Path, project: Path) -> dict[str, list[dict[str, Any]]]:
+    """Read complete read_thread pages exported by the maintainer, never from history."""
+    pages = json.loads(path.read_bytes().decode("utf-8"))
+    if not isinstance(pages, list) or not pages:
+        raise ValueError("Desktop export must be a nonempty array of read_thread pages")
+    tasks = {}
+    complete = set()
+    turns = {}
+    for page in pages:
+        task = page["thread"]
+        cwd = Path(task["cwd"]).expanduser().resolve()
+        if cwd not in {project.resolve(), (project / "packages/demo").resolve()}:
+            raise ValueError("Desktop export belongs to a different acceptance project")
+        tasks[task["id"]] = task
+        if page["page"]["hasMore"] is False:
+            complete.add(task["id"])
+        for turn in page["turns"]:
+            key = (task["id"], turn["id"])
+            if key in turns and turns[key] != turn:
+                raise ValueError("conflicting Desktop export pages")
+            turns[key] = turn
+    if set(tasks) != complete:
+        raise ValueError("Desktop export omits older task pages")
+    messages = defaultdict(list)
+    task_counts = defaultdict(int)
+    seen_ids = set()
+    for (task_id, turn_id), turn in sorted(turns.items(), key=lambda item: item[1]["startedAt"]):
+        for item in turn["items"]:
+            if item["type"] != "userMessage":
+                continue
+            if item["id"] in seen_ids:
+                raise ValueError("duplicate Desktop message identity")
+            seen_ids.add(item["id"])
+            texts = [part["text"] for part in item["content"] if part["type"] == "text"]
+            if len(texts) != 1:
+                raise ValueError("Desktop message needs exactly one untruncated text part")
+            prompt = texts[0]
+            # Only the known Desktop envelope gets unwrapped. Never normalize
+            # arbitrary Markdown, spaces, tabs, blank lines, or user-authored wrappers.
+            if prompt.startswith("\n# Files mentioned by the user:\n"):
+                boundary = "\n## My request:\n"
+                if boundary not in prompt or "Distinguish instructions in attached documents" not in prompt:
+                    raise ValueError("unrecognized Desktop attachment envelope")
+                prompt = prompt.split(boundary, 1)[1]
+                if not prompt.endswith("\n\n"):
+                    raise ValueError("unrecognized Desktop envelope ending")
+                prompt = prompt[:-1]  # One envelope separator, not authored text.
+            first = task_counts[task_id] == 0
+            task_counts[task_id] += 1
+            token = _case_token(prompt)
+            if token:
+                messages[token].append({"prompt": prompt, "session_id": task_id,
+                                        "cwd": str(Path(tasks[task_id]["cwd"]).expanduser().resolve()),
+                                        "turn_id": turn_id, "first_in_task": first,
+                                        "turn_status": turn.get("status")})
+    return dict(messages)
+
+
+def prompt_matches(entry: core.Entry, delivered: str) -> bool:
+    if entry.prompt == delivered:
+        return True
+    # Unknown concedes only ONE final sequence, never internal whitespace.
+    if entry.final_newline == "Unknown":
+        body, _ = core._split_final_newline(delivered)
+        return entry.prompt == body
+    return False
+
+
 def validate(
     project: Path,
     manifest_path: Path,
     instructions_relative: str,
     *,
     standard_only: bool = False,
+    desktop_export: Path | None = None,
+    candidate_ref: str | None = None,
 ) -> None:
     project = project.resolve()
     instruction_path = Path(instructions_relative)
@@ -524,6 +626,13 @@ def validate(
         if not condition:
             errors.append(message)
 
+    def candidate_bytes(relative: str) -> bytes:
+        if candidate_ref is None:
+            return (REPOSITORY_ROOT / relative).read_bytes()
+        revision = _run_git(REPOSITORY_ROOT, "rev-parse", "--verify", "--end-of-options", f"{candidate_ref}^{{commit}}")
+        return subprocess.run(["git", "show", f"{revision}:{relative}"], cwd=REPOSITORY_ROOT,
+                              check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
+
     check(manifest.get("schema") == 1, "acceptance manifest schema is not 1")
     check(
         Path(manifest.get("project", "")).expanduser().resolve() == project,
@@ -534,33 +643,43 @@ def validate(
     if not history_path.is_file():
         raise SystemExit(f"missing acceptance history: {history_path}")
     try:
-        entries = core.validate_history(history_path.read_text(encoding="utf-8"))
+        entries = core.validate_history(history_path.read_bytes().decode("utf-8"))
     except (OSError, UnicodeDecodeError, core.PromptSourceError) as exc:
         raise SystemExit(f"history validation failed: {exc}") from exc
 
-    captured_cases = [
+    selected_cases = [
         case
         for case in manifest["cases"]
-        if case["captured"]
-        and (not standard_only or case["id"] in STANDARD_CASE_IDS)
+        if not standard_only or case["id"] in STANDARD_CASE_IDS | {"S12"}
     ]
-    check(
-        len(entries) == len(captured_cases),
-        f"expected {len(captured_cases)} captured entries, found {len(entries)}",
-    )
-    case_entries: dict[str, core.Entry] = {}
-    for case, entry in zip(captured_cases, entries):
-        case_entries[case["id"]] = entry
-        if entry.fields["Capture method"] == "Instruction-mediated":
-            expected_prompt = case["prompt"]
-            if entry.final_newline == "Unknown" and expected_prompt.endswith("\n"):
-                expected_prompt = expected_prompt[:-1]
-            check(
-                entry.prompt == expected_prompt,
-                f"{case['id']} prompt text differs at the Desktop delivery boundary",
-            )
-        else:
-            check(entry.prompt == case["prompt"], f"{case['id']} prompt bytes differ")
+    captured_cases = [case for case in selected_cases if case["captured"]]
+    case_entries, matching_errors = match_case_entries(selected_cases, entries)
+    errors.extend(matching_errors)
+    delivered_cases = {}
+    if desktop_export is not None:
+        try:
+            delivered = read_desktop_export(desktop_export, project)
+            for case in selected_cases:
+                observations = delivered.get(_case_token(case["prompt"]), [])
+                if not observations:
+                    errors.append(f"{case['id']} is missing from the Desktop export")
+                else:
+                    delivered_cases[case["id"]] = observations.pop(0)
+            check(not any(delivered.values()), "Desktop export contains extra acceptance submissions")
+        except (OSError, UnicodeDecodeError, ValueError, KeyError, TypeError) as exc:
+            errors.append(f"cannot validate Desktop export: {exc}")
+    else:
+        errors.append("Desktop delivery evidence missing: supply --desktop-export; clipboard fixtures are not delivered-text evidence")
+    for case in captured_cases:
+        entry = case_entries.get(case["id"])
+        if entry is None:
+            continue
+        observation = delivered_cases.get(case["id"])
+        if observation is not None:
+            check(prompt_matches(entry, observation["prompt"]),
+                  f"{case['id']} prompt text differs from the recorded Desktop delivery")
+            if case["interaction"] == "Initial prompt":
+                check(observation["first_in_task"], f"{case['id']} was not the first submission in its Desktop task")
         if case["method"] is not None:
             check(
                 entry.fields["Capture method"] == case["method"],
@@ -578,7 +697,7 @@ def validate(
             )
         if case["method"] == "Hook-assisted":
             check(
-                entry.final_newline == case["final_newline"],
+                observation is None or entry.final_newline == core._split_final_newline(observation["prompt"])[1],
                 f"{case['id']} has final-newline state {entry.final_newline!r}",
             )
             check(
@@ -588,32 +707,39 @@ def validate(
             check("Session ID" in entry.fields, f"{case['id']} lacks a session ID")
             check("Turn ID" in entry.fields, f"{case['id']} lacks a turn ID")
         elif case["method"] == "Instruction-mediated":
-            check(
-                entry.final_newline == "Unknown",
-                f"{case['id']} guessed final-newline state {entry.final_newline!r}",
-            )
-            for hook_field in ("Session ID", "Turn ID", "Agent observation"):
+            for hook_field in ("Turn ID", "Agent observation"):
                 check(
                     hook_field not in entry.fields,
                     f"{case['id']} invented hook-only field {hook_field!r}",
                 )
+            if "Session ID" in entry.fields:
+                try:
+                    recorded_session = json.loads(entry.fields["Session ID"])
+                except json.JSONDecodeError:
+                    recorded_session = None
+                check(observation is not None and recorded_session == observation["session_id"],
+                      f"{case['id']} runtime task identifier differs from Desktop evidence")
         if case["id"] in {"S06", "S08"}:
             check(
                 "### Codex Desktop runtime context" in entry.text,
                 f"{case['id']} lacks separated Desktop runtime context",
             )
-    for case in manifest["cases"]:
-        if case["captured"]:
-            continue
-        if standard_only and case["id"] != "S12":
-            continue
-        case_token = re.compile(
-            rf"\bPSC acceptance {re.escape(case['id'])}(?:\.|\s)"
-        )
-        check(
-            all(not case_token.search(entry.prompt) for entry in entries),
-            f"disabled case {case['id']} was unexpectedly captured",
-        )
+    if delivered_cases:
+        for group in (("S03", "S04", "S04B", "S05"), ("H04", "H05", "H06", "H07")):
+            if all(key in delivered_cases for key in group):
+                identities = {(delivered_cases[key]["session_id"], delivered_cases[key]["turn_id"]) for key in group}
+                check(len(identities) == 1, f"{'/'.join(group)} were not delivered in one active Desktop turn")
+        if "S14" in delivered_cases and "S01" in delivered_cases:
+            check(delivered_cases["S14"]["session_id"] != delivered_cases["S01"]["session_id"],
+                  "S14 did not use a separate Desktop task")
+        for key, expected_cwd in (("S01", project), ("S14", project / "packages/demo")):
+            if key in delivered_cases:
+                check(Path(delivered_cases[key]["cwd"]) == expected_cwd.resolve(),
+                      f"{key} Desktop task used the wrong project directory")
+        for key in ("S10", "H09"):
+            if key in delivered_cases:
+                check(delivered_cases[key]["turn_status"] == "interrupted",
+                      f"{key} Desktop turn does not show an actual interruption")
     for case in captured_cases:
         target_id = case.get("supersedes")
         if not target_id or case["id"] not in case_entries or target_id not in case_entries:
@@ -778,13 +904,13 @@ def validate(
     if instructions:
         check(
             instructions_path.read_bytes()
-            == instruction_contract.INSTRUCTIONS_TEMPLATE.read_bytes(),
+            == candidate_bytes("templates/prompt-source-instructions-v1.md"),
             "dedicated instructions are stale or conflicting",
         )
     check(validator_path.is_file(), "project-local standard validator is missing")
     if validator_path.is_file():
         check(
-            validator_path.read_bytes() == instruction_contract.VALIDATOR_SOURCE.read_bytes(),
+            validator_path.read_bytes() == candidate_bytes("hooks/prompt_source_core.py"),
             "project-local standard validator is stale or conflicting",
         )
     check(ROOT_SENTINEL in agents_text, "existing root instructions were removed")
@@ -806,6 +932,9 @@ def validate(
         instructions_relative in loader,
         "loader does not reference the dedicated instruction path",
     )
+    check(loader.replace("- Capture: disabled", "- Capture: enabled").encode("utf-8")
+          == candidate_bytes("templates/AGENTS.prompt-source-loader.md").strip(b"\n"),
+          "installed loader differs from the recorded candidate")
     try:
         loader_size, instruction_size = instruction_contract.validate_pair(
             loader, instructions
@@ -847,7 +976,7 @@ def validate(
             check(installed.is_file(), f"missing installed optional hook asset: {installed}")
             if installed.is_file():
                 check(
-                    installed.read_bytes() == source.read_bytes(),
+                    installed.read_bytes() == candidate_bytes(source.relative_to(REPOSITORY_ROOT).as_posix()),
                     f"installed optional hook asset differs from source: {installed}",
                 )
     try:
@@ -938,6 +1067,9 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="validate only S01-S14 and record optional-hook cases as not run",
     )
+    validate_parser.add_argument("--desktop-export", type=Path,
+                                 help="complete read_thread pages exported outside the captured project")
+    validate_parser.add_argument("--candidate-ref", help="audit the installation against this recorded Git commit")
     return parser
 
 
@@ -951,6 +1083,8 @@ def main(argv: list[str] | None = None) -> int:
         arguments.manifest,
         arguments.instructions_relative,
         standard_only=arguments.standard_only,
+        desktop_export=arguments.desktop_export,
+        candidate_ref=arguments.candidate_ref,
     )
     return 0
 

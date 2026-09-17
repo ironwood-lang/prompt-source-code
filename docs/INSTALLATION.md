@@ -15,7 +15,7 @@ The installed files are:
 ```text
 AGENTS.md                              # existing project guidance plus the marked loader
 .prompt-source/instructions-v1.md      # complete operational capture contract
-.prompt-source/validate.py             # schema-1 validator invoked in read-only mode
+.prompt-source/validate.py             # capture control, entry writer, schema validator
 ```
 
 The path `.prompt-source/instructions-v1.md` is frozen for instruction version 1. The
@@ -39,7 +39,7 @@ python3 scripts/instruction_contract.py install /path/to/project
 The standard-library installer:
 
 - creates `.prompt-source/instructions-v1.md` from the canonical template;
-- installs `.prompt-source/validate.py` from the reviewed standard-library validator;
+- installs `.prompt-source/validate.py` from the reviewed standard-library helper;
 - creates a root `AGENTS.md` when none exists;
 - otherwise preserves every existing byte and appends the loader after a blank line;
 - refuses partial, duplicate, reversed, or conflicting loader markers; and
@@ -125,6 +125,19 @@ While disabled, Codex does not read the dedicated file or update/delete history 
 assets. The generated-provenance Git restriction remains active. Change only `disabled`
 back to `enabled` to resume; the next valid entry appends after the greatest structural
 number without rewriting older entries.
+
+Wait for the current turn to finish before changing this control. The loader checks the
+on-disk setting on every submission, including in an existing task; the entry writer and
+completion helper check it again immediately before writing. A disabled response is a
+normal no-capture outcome, not a failure to repair. Disabled capture does not read the
+dedicated file. To inspect the live setting from the project root, run:
+
+```sh
+/usr/bin/python3 .prompt-source/validate.py --capture-state
+```
+
+After installing or updating an older candidate, start a new Desktop task so it loads the
+new per-submission rule. An already running task may still hold the old instructions.
 
 Optional hooks operate separately. Disable both hook definitions and restart Desktop
 before relying on this control to suspend every capture path.

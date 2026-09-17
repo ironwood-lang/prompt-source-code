@@ -190,7 +190,7 @@ class FormatFixtureTests(unittest.TestCase):
         self.assertTrue(self.history.startswith(HEADER + "\n"))
         self.assertEqual(self.history.splitlines()[0], SCHEMA_MARKER)
         self.assertIn(SCHEMA_MARKER, SPEC.read_text(encoding="utf-8"))
-        self.assertIn(SCHEMA_MARKER, INSTRUCTIONS.read_text(encoding="utf-8"))
+        self.assertIn(SCHEMA_MARKER, (ROOT / "hooks/prompt_source_core.py").read_text(encoding="utf-8"))
 
     def test_entries_are_unique_ordered_and_contiguous(self):
         numbers = [number for number, _ in self.blocks]
@@ -431,13 +431,15 @@ class FormatFixtureTests(unittest.TestCase):
             "Completion reason unavailable; no reliable Interrupt event was observed.",
             "Hook-confirmed Interrupt event.",
             "prompt_source_assets/",
-            "Do not stage, commit, push, publish, or upload",
+            "Never stage, commit, push, publish, or upload",
             "raw-keystroke, pre-serialization",
             "Never rewrite history",
             "prompt-source-instructions: 1",
             "prompt-source-instructions-end",
             "physical EOF",
-            "move only this exact unfinished block to EOF",
+            "--begin-standard",
+            "--finish-standard",
+            "first_in_task",
             "PromptSourceCode hook matching context",
             "--claim",
             "--replace-entry",
@@ -445,15 +447,14 @@ class FormatFixtureTests(unittest.TestCase):
             "Deduplication note",
             "Without valid hook context",
             "unsafe or future-schema history",
-            "Optional metadata",
+            "Never rewrite history or invent metadata",
             "current-turn entries",
-            "current Desktop task's first submission",
-            "standard uses `Unknown` unless reliably exposed",
-            "any backtick and no tilde requires `~~~text`, not ```text",
+            "current Desktop task's first user submission",
+            "Final newline: Unknown",
             "Desktop attachment/paste envelope",
             "user input is the text after `## My request:`",
             "factual path-free summary",
-            "Steering` for every active-turn submission",
+            "correction during OR after a turn",
             "has no trusted Stop reason",
             "#### Artifact 1",
             "Preserved copy: [filename](<prompt_source_assets/filename>)",

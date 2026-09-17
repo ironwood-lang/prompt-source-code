@@ -67,6 +67,10 @@ OPTIONAL_PRESERVED_ARTIFACT_FIELDS = (
     "Reuse note",
     "Pre-clipboard comparison",
 )
+# Frozen instruction pair for the standard path. Optional hook event handlers do
+# not consult this control: their enablement and trust remain separate.
+STANDARD_LOADER_SHA256 = "d64f51155fd5cba44370f9afd0300737f253b5db6244844dd8314af4fb6fd1ce"
+STANDARD_INSTRUCTIONS_SHA256 = "114a6dd547a56521a4c366cf579424f363435b91367f24913551a8260ba2d157"
 
 
 class PromptSourceError(Exception):
@@ -945,6 +949,158 @@ def validate_history_file(root: Path) -> list[Entry]:
     return validate_history(text)
 
 
+def standard_capture_state(root: Path) -> bool:
+    """Read the live control, then verify the enabled installation without writes."""
+    root = _validated_root(root)
+    try:
+        agents = (root / "AGENTS.md").read_bytes().decode("utf-8")
+        begin = "<!-- prompt-source-loader-begin -->"
+        end = "<!-- prompt-source-loader-end -->"
+        if agents.count(begin) != 1 or agents.count(end) != 1:
+            raise HistoryConflict("standard loader markers are missing or conflicting")
+        start, stop = agents.index(begin), agents.index(end)
+        if stop < start:
+            raise HistoryConflict("standard loader markers are reversed")
+        loader = agents[start : stop + len(end)]
+        controls = re.findall(r"^- Capture: (enabled|disabled)$", loader, re.MULTILINE)
+        if len(controls) != 1:
+            raise HistoryConflict("standard loader must have one enabled/disabled control")
+        canonical = loader.replace("- Capture: disabled", "- Capture: enabled")
+        if hashlib.sha256(canonical.encode("utf-8")).hexdigest() != STANDARD_LOADER_SHA256:
+            raise HistoryConflict("standard loader is stale, conflicting, or truncated")
+        if controls[0] == "disabled":
+            return False  # Do not even read the dedicated file while disabled.
+        instructions = (root / ".prompt-source/instructions-v1.md").read_bytes()
+        if hashlib.sha256(instructions).hexdigest() != STANDARD_INSTRUCTIONS_SHA256:
+            raise HistoryConflict("dedicated instructions are stale, conflicting, or truncated")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise HistoryConflict(f"standard installation is missing or unreadable: {exc}") from exc
+    return True
+
+
+def begin_standard(root: Path, request: dict[str, Any]) -> Entry | None:
+    """Render and append one model-observed input; never infer a task from file length."""
+    root = _validated_root(root)
+    with project_lock(root):
+        if not standard_capture_state(root):
+            return None
+        prompt = _required_string(request, "prompt", allow_empty=True)
+        _utf8_bytes(prompt, "prompt")
+        first = request.get("first_in_task")
+        if not isinstance(first, bool):
+            raise InvalidEvent("first_in_task must be a boolean from the current conversation")
+        interaction = "Initial prompt" if first else request.get("interaction", "Follow-up")
+        if interaction not in {"Initial prompt", "Follow-up", "Steering", "Correction"}:
+            raise InvalidEvent("invalid standard interaction")
+        if not first and interaction == "Initial prompt":
+            raise InvalidEvent("Initial prompt requires first_in_task true")
+        history, entries = _read_history(root / HISTORY_NAME)
+        session = os.environ.get("CODEX_THREAD_ID")
+        if session:
+            same_task = [
+                entry for entry in entries
+                if entry.fields.get("Session ID") == _json_field(session)
+                and entry.fields.get("Agent observation") != "Pending"
+            ]
+            if first and same_task:
+                raise HistoryConflict("this runtime task already has captured submissions")
+            if not first and not same_task and request.get("uncaptured_predecessor") is not True:
+                raise HistoryConflict(
+                    "no earlier capture belongs to this runtime task; use first_in_task true "
+                    "for its first submission, or uncaptured_predecessor true only when an "
+                    "earlier submission in this task was not captured"
+                )
+        number = max((entry.number for entry in entries), default=0) + 1
+        metadata = [
+            f"## Entry {number:06d}", "",
+            f"- Interaction: {interaction}", "- Status: In progress",
+            "- Capture method: Instruction-mediated",
+        ]
+        if session:
+            metadata.append(f"- Session ID: {_json_field(session)}")
+        if request.get("deduplication_uncertain") is True:
+            metadata.append(f"- Deduplication note: {UNCERTAIN_DEDUPLICATION_NOTE}")
+        for key, field in (("continues", "Continues"), ("supersedes", "Supersedes")):
+            target = request.get(key)
+            if target is None:
+                continue
+            if first or isinstance(target, bool) or not isinstance(target, int):
+                raise InvalidEvent(f"{key} requires a backward entry number on a continuation")
+            previous = next((entry for entry in entries if entry.number == target), None)
+            if previous is None or target >= number:
+                raise HistoryConflict(f"{key} does not identify an earlier entry")
+            if key == "supersedes" and interaction != "Correction":
+                raise InvalidEvent("only a correction may supersede an entry")
+            if (key == "continues" and session
+                    and previous.fields.get("Session ID") not in {None, _json_field(session)}):
+                raise HistoryConflict("continuation points to another Desktop task")
+            metadata.append(f"- {field}: Entry {target:06d}")
+        recover = request.get("recover", [])
+        if not isinstance(recover, list) or any(
+            isinstance(n, bool) or not isinstance(n, int) for n in recover
+        ):
+            raise InvalidEvent("recover must be a list of known unfinished earlier-turn entry numbers")
+        if len(set(recover)) != len(recover):
+            raise InvalidEvent("recover contains duplicate entry numbers")
+        for target in recover:
+            previous = next((entry for entry in entries if entry.number == target), None)
+            if (previous is None
+                    or previous.fields["Capture method"] != "Instruction-mediated"
+                    or previous.fields["Status"] != "In progress"):
+                raise HistoryConflict("recover must identify unfinished standard entries")
+            if session and previous.fields.get("Session ID") not in {None, _json_field(session)}:
+                raise HistoryConflict("cannot recover another runtime task's unfinished work")
+        for previous in reversed(entries):
+            if previous.number not in recover:
+                continue
+            metadata_end = previous.text.index("\n\n### User input\n")
+            prefix = previous.text[:metadata_end].replace("- Status: In progress", "- Status: Incomplete", 1)
+            prefix = re.sub(r"\n- Status reason: [^\n]*", "", prefix)
+            recovered = (
+                prefix + "\n- Status reason: Completion reason unavailable; "
+                "no reliable Interrupt event was observed." + previous.text[metadata_end:]
+            )
+            history = history[:previous.start] + recovered + history[previous.end:]
+        fence = _dynamic_fence(prompt)
+        block = "\n".join(metadata) + (
+            f"\n\n### User input\n\n- Final newline: Unknown\n\n{fence}text\n"
+            f"{prompt}\n{fence}\n"
+        )
+        updated = history + "\n" + block
+        result = validate_history(updated)[-1]
+        _atomic_write(root / HISTORY_NAME, updated)
+        return result
+
+
+def finish_standard(root: Path, request: dict[str, Any]) -> Entry | None:
+    """Complete only the named unfinished standard entry, retaining its input bytes."""
+    root = _validated_root(root)
+    with project_lock(root):
+        if not standard_capture_state(root):
+            return None
+        number = request.get("entry_number")
+        if isinstance(number, bool) or not isinstance(number, int) or number < 1:
+            raise InvalidEvent("entry_number must be a positive integer")
+        result = _required_string(request, "result")
+        history, entries = _read_history(root / HISTORY_NAME)
+        entry = next((item for item in entries if item.number == number), None)
+        if entry is None or entry.fields["Capture method"] != "Instruction-mediated":
+            raise NoReliableMatch("no standard entry matches entry_number")
+        if entry.fields["Status"] != "In progress":
+            raise HistoryConflict("standard entry is already terminal")
+        session = entry.fields.get("Session ID")
+        if session is not None and session != _json_field(os.environ.get("CODEX_THREAD_ID", "")):
+            raise NoReliableMatch("entry belongs to a different runtime task")
+        block = entry.text.replace("- Status: In progress\n", "- Status: Completed\n", 1)
+        block += "\n### Result\n\n" + result + ("" if result.endswith("\n") else "\n")
+        updated = history[: entry.start] + block + history[entry.end :]
+        candidates = validate_history(updated)
+        if [item.number for item in candidates] != [item.number for item in entries]:
+            raise HistoryConflict("result must not add structural entries")
+        _atomic_write(root / HISTORY_NAME, updated)
+        return next(item for item in candidates if item.number == number)
+
+
 def run_hook(root: Path, payload: dict[str, Any]) -> int:
     event_name = payload.get("hook_event_name")
     if event_name == "UserPromptSubmit":
@@ -975,14 +1131,37 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="validate the project history without changing it",
     )
+    mode.add_argument("--capture-state", action="store_true", help="read the current standard capture control")
+    mode.add_argument("--begin-standard", action="store_true", help="append a standard entry from stdin JSON")
+    mode.add_argument("--finish-standard", action="store_true", help="complete a standard entry from stdin JSON")
     arguments = parser.parse_args(argv)
+    standard_mode = arguments.capture_state or arguments.begin_standard or arguments.finish_standard
+    error_label = "capture" if standard_mode else "hook"
     try:
         root = Path.cwd()
+        installed = Path(__file__).resolve()
+        if ((standard_mode or arguments.validate_history)
+                and installed.name == "validate.py" and installed.parent.name == ".prompt-source"):
+            root = installed.parent.parent
+        if arguments.capture_state:
+            _write_json({"capture": "enabled" if standard_capture_state(root) else "disabled"})
+            return 0
         if arguments.validate_history:
             entries = validate_history_file(root)
             sys.stdout.write(f"PromptSourceCode: history valid ({len(entries)} entries)\n")
             return 0
         payload = read_event()
+        if arguments.begin_standard or arguments.finish_standard:
+            operation = begin_standard if arguments.begin_standard else finish_standard
+            entry = operation(root, payload)
+            if entry is None:
+                _write_json({"capture": "disabled"})
+            else:
+                _write_json({
+                    "capture": "enabled", "entry_number": entry.number,
+                    "interaction": entry.fields["Interaction"], "entry_sha256": entry.utf8_sha256,
+                })
+            return 0
         if arguments.claim:
             entry = claim_entry(root, payload)
             _write_json({"entry_number": entry.number, "entry_sha256": entry.utf8_sha256})
@@ -993,10 +1172,10 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         return run_hook(root, payload)
     except PromptSourceError as exc:
-        sys.stderr.write(f"PromptSourceCode hook error: {exc}\n")
+        sys.stderr.write(f"PromptSourceCode {error_label} error: {exc}\n")
         return 1
     except OSError as exc:
-        sys.stderr.write(f"PromptSourceCode hook I/O error: {exc}\n")
+        sys.stderr.write(f"PromptSourceCode {error_label} I/O error: {exc}\n")
         return 1
 
 

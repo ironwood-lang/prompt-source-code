@@ -211,7 +211,11 @@ def check(project: Path) -> tuple[Measurement, Measurement]:
         raise InstructionContractError("dedicated instructions are stale or conflicting")
     agents = decode_utf8(agents_payload, "root AGENTS.md")
     instructions = decode_utf8(instructions_payload, "dedicated instructions")
-    return validate_pair(extract_loader(agents), instructions)
+    loader = extract_loader(agents)
+    canonical_loader = loader.replace("- Capture: disabled", "- Capture: enabled")
+    if canonical_loader != LOADER_TEMPLATE.read_text(encoding="utf-8").strip("\n"):
+        raise InstructionContractError("loader is stale or conflicting")
+    return validate_pair(loader, instructions)
 
 
 def main() -> int:

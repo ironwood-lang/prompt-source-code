@@ -21,6 +21,10 @@ Copying them into `.codex/` does not enable either definition and does not grant
 
 First complete the standard installation in [`INSTALLATION.md`](INSTALLATION.md), including
 the root loader, `.prompt-source/instructions-v1.md`, and `.prompt-source/validate.py`.
+The standard helper now creates and finalizes instruction-mediated entries as well as
+validating history. Its runtime-supplied `Session ID`, when available, does not make an
+entry hook-assisted. Only hook matching context activates the hook claim path. The
+standard loader control and explicit hook enablement remain separate controls.
 Then, from a trusted local PromptSourceCode checkout, review these exact optional files:
 
 - `hooks/prompt_source_core.py`
