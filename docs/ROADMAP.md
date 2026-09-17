@@ -177,9 +177,20 @@ deterministic tests and 80 repeated concurrency/failure-injection invocations.
 
 **Status:** Planned
 
+- Treat the 0.1.0 instruction footprint as a release-blocking usability and compatibility
+  concern for this milestone. The baseline template is 358 lines, 2,591 words, and 18,250
+  bytes; relocating that full contract without substantially reducing what Codex must read
+  does not satisfy this milestone.
 - Replace the full inline PromptSourceCode block in the project-root `AGENTS.md` with a
   tiny, clearly marked loader block that directs Codex to read the complete capture
   contract from a dedicated, versioned file inside the project.
+- Reduce the always-read operational contract substantially. Keep only instructions
+  required to perform capture there, and move rationale, extended examples, format
+  exposition, and maintainer-oriented detail to documentation that is not loaded for every
+  task.
+- Define and enforce documented byte and word budgets for both the loader and the complete
+  always-read instruction set. The budgets must leave meaningful room for a project's own
+  root and nested guidance under Codex's default project-instruction limit.
 - Choose and freeze the dedicated file's canonical project-relative path and define how
   the loader coexists with a project's existing `AGENTS.md` instructions.
 - Keep the loader independent of user-specific fallback filenames, global Codex
@@ -194,8 +205,12 @@ deterministic tests and 80 repeated concurrency/failure-injection invocations.
   or `prompt_source_assets/` artifacts.
 - Update installation, updating, disabling, re-enabling, removal, troubleshooting, and
   compatibility documentation for the loader-based layout.
-- Add deterministic tests for loader markers, path consistency, upgrade safety, inert
-  optional hooks, and the absence of PromptSourceCode-specific global configuration.
+- Add deterministic tests for loader markers, path consistency, instruction-size budgets,
+  upgrade safety, inert optional hooks, and the absence of PromptSourceCode-specific global
+  configuration.
+- Test a representative project with substantial existing root and nested instructions and
+  verify that PromptSourceCode neither truncates nor displaces the project's guidance under
+  default Codex configuration. Record before-and-after line, word, and byte counts.
 - Run a fresh clean-project Codex Desktop acceptance test demonstrating that the compact
   loader produces the same standard-capture behavior as the full inline contract before
   recommending the new layout in the README.
@@ -203,8 +218,10 @@ deterministic tests and 80 repeated concurrency/failure-injection invocations.
 **Exit criterion:** A new user can keep only a small PromptSourceCode loader block in the
 project-root `AGENTS.md`, keep the complete capture instructions in the documented
 dedicated project file, and obtain the same validated standard-capture behavior without
-per-user Codex configuration. Existing 0.1.0 installations and captured histories remain
-valid and require no rewriting.
+per-user Codex configuration. The complete always-read instruction set is substantially
+smaller than the 0.1.0 baseline, satisfies its enforced size budgets, and coexists with
+representative existing project guidance without truncation. Existing 0.1.0 installations
+and captured histories remain valid and require no rewriting.
 
 ## 0.1.0 Non-goals
 
