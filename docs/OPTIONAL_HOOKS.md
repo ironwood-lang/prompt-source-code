@@ -151,7 +151,7 @@ on stderr.
 Every hook and agent-helper mutation follows the same transaction:
 
 1. lock the already-existing project directory;
-2. read and validate the whole UTF-8 version 1 history;
+2. read and validate the whole UTF-8 schema-1 history;
 3. reject malformed fences, a wrong schema marker, duplicate or non-increasing structural
    entry headings, or a stale expected entry digest;
 4. calculate the update while holding the lock;

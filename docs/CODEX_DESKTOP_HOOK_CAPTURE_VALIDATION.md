@@ -1,6 +1,6 @@
 # Codex Desktop Optional-Hook Capture Validation
 
-This is the preserved Milestone 3 evidence for the optional path. The frozen version 1
+This is the preserved Milestone 3 evidence for the optional path. The frozen 0.1.0
 bundle was later rechecked in the separate
 [`CODEX_DESKTOP_V1_RELEASE_READINESS.md`](CODEX_DESKTOP_V1_RELEASE_READINESS.md) run;
 that later report does not alter the facts recorded here.

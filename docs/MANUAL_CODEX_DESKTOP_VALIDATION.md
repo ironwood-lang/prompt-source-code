@@ -147,7 +147,7 @@ Codex Desktop.
 - [ ] Disable or remove both hooks, restart Desktop, and confirm the next interaction uses
   standard instruction-mediated capture successfully.
 
-## Final version 1 checks
+## Final 0.1.0 checks
 
 - [ ] Validate the final history with the release hook core and deterministic format
   checks. Confirm unique increasing structural headings, canonical dynamic fences,
@@ -163,7 +163,7 @@ Codex Desktop.
 For a new optional-hook implementation run, record case-by-case factual evidence without
 rewriting the historical
 [`CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md`](CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md).
-For a version 1 release run, record the final-bundle cases in
+For a 0.1.0 release run, record the final-bundle cases in
 [`CODEX_DESKTOP_V1_RELEASE_READINESS.md`](CODEX_DESKTOP_V1_RELEASE_READINESS.md). Do not
 mark the corresponding milestone complete unless every required Desktop-only case was
 actually performed.

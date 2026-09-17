@@ -1,13 +1,13 @@
-# PromptSourceCode Format, Version 1
+# PromptSourceCode Format, Schema 1
 
 ## Status and scope
 
 This document is the frozen, normative PromptSourceCode schema-1 contract for Codex
 Desktop projects. It is shared by the standard, instruction-mediated capture path and the
-explicitly enabled optional hook-assisted path. Version 1 implementations may fix code or
+explicitly enabled optional hook-assisted path. Schema-1 implementations may fix code or
 clarify prose, but they MUST NOT reinterpret a valid schema-1 history or make one invalid.
 
-Version 1 has exactly two persistent outputs in a captured project:
+Schema 1 has exactly two persistent outputs in a captured project:
 
 ```text
 PROMPT_SOURCE.md
@@ -43,7 +43,7 @@ would make a valid schema-1 history mean something different or become invalid. 
 implementation corrections, and documentation clarifications may retain schema 1 only
 when valid histories keep the same meaning and remain valid.
 
-Version 1 supplies no extension namespace and no automatic migration. An unrecognized
+Schema 1 supplies no extension namespace and no automatic migration. An unrecognized
 entry metadata field or structural variant is not silently discarded. A writer preserves
 the existing bytes and stops rather than guessing. Future migration guidance must be
 explicit and must preserve the source history and artifacts until a user deliberately
@@ -208,8 +208,8 @@ literal `Unavailable` or a factual explanation. Never invent timestamps, identif
 model names, paths, byte counts, hashes, or reasons.
 
 The metadata field set and ordering above are closed for schema 1. Unrecognized or
-out-of-order entry metadata makes the history unsafe for a version 1 writer to modify.
-This prevents a version 1 update from silently deleting or misinterpreting data written
+out-of-order entry metadata makes the history unsafe for a schema-1 writer to modify.
+This prevents a schema-1 update from silently deleting or misinterpreting data written
 under another contract.
 
 ## User input representation
@@ -574,9 +574,9 @@ from user prose or an unfinished entry.
 ### Hook write safety
 
 Every hook append, claim, interruption, and agent-helper replacement MUST hold the same
-writer lock, validate the complete version 1 history, and use a temporary file in the
+writer lock, validate the complete schema-1 history, and use a temporary file in the
 history's directory followed by atomic replacement. The writer rejects malformed or
-truncated history, a non-version-1 marker, duplicate or non-increasing structural entry
+truncated history, a non-schema-1 marker, duplicate or non-increasing structural entry
 headings, stale expected entry content, and immutable-field changes. It does not silently
 repair unrelated corruption.
 
@@ -630,7 +630,7 @@ A writer distinguishes an absent history from an unsafe existing history:
   available, but it does not authorize rewriting an incompatible history.
 
 These rules also apply when a future PromptSourceCode version uses a marker other than
-schema 1. Version 1 stops safely; it never prepends its header, treats the file as empty,
+schema 1. Schema 1 stops safely; it never prepends its header, treats the file as empty,
 or promises an unimplemented migration.
 
 ## Git policy
@@ -652,4 +652,4 @@ history in an otherwise untested environment, but that does not establish suppor
 live capture there.
 
 See [`COMPATIBILITY.md`](COMPATIBILITY.md) for tested environments, upgrade steps, and the
-required stop behavior for non-version-1 histories.
+required stop behavior for non-schema-1 histories.

@@ -1,6 +1,6 @@
 # Codex Desktop Standard-Capture Validation
 
-This is the preserved Milestone 2 evidence for the standard path. The frozen version 1
+This is the preserved Milestone 2 evidence for the standard path. The frozen 0.1.0
 bundle was later rechecked in the separate
 [`CODEX_DESKTOP_V1_RELEASE_READINESS.md`](CODEX_DESKTOP_V1_RELEASE_READINESS.md) run;
 that later report does not alter the facts recorded here.

@@ -11,9 +11,9 @@ This file governs development of PromptSourceCode itself. Keep the installable e
 instructions in their own documented template; do not make users copy this development
 file into their projects.
 
-## Version 1 Scope
+## 0.1.0 Scope
 
-- Target Codex Desktop first. Do not broaden version 1 to Codex CLI, the Codex IDE
+- Target Codex Desktop first. Do not broaden 0.1.0 to Codex CLI, the Codex IDE
   extension, Claude Code, or other agents unless the user explicitly changes the scope.
 - Use `AGENTS.md` instructions as the required, default capture mechanism.
 - Treat hooks as an explicit, optional enhancement layered on top of the instructions.

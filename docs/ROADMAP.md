@@ -82,8 +82,8 @@ single-physical-line pasted-image fidelity field. A post-run cross-task test als
 ambiguous insertion after repeated result text; the contract now requires EOF-only append,
 physical-order verification, and bounded repair of only a newly misplaced unfinished
 block before task work. Optional hook work was subsequently completed in Milestone 3;
-version 1 release hardening was subsequently completed in Milestone 4. Tagging and
-publishing remain pending explicit authorization.
+the 0.1.0 release candidate was subsequently completed in Milestone 4. Public tagging and
+publication were explicitly authorized and completed in Milestone 5.
 
 ## Milestone 3: Optional Hook Enhancement
 
@@ -123,7 +123,7 @@ failure blocked Desktop message delivery. Evidence and the resulting boundaries 
 recorded in
 [`CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md`](CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md).
 
-## Milestone 4: Version 1 Release
+## Milestone 4: 0.1.0 Release Candidate
 
 **Status:** Complete
 
@@ -142,11 +142,38 @@ Git isolation while ordinary project files retained normal commit and push behav
 
 The format freeze, environment, case results, hashes, limitations, and release decision
 are recorded in
-[`CODEX_DESKTOP_V1_RELEASE_READINESS.md`](CODEX_DESKTOP_V1_RELEASE_READINESS.md). The
-repository is ready for an explicitly authorized version 1 tag; no tag, GitHub release,
-package publication, or other release artifact was created as part of this milestone.
+[`CODEX_DESKTOP_V1_RELEASE_READINESS.md`](CODEX_DESKTOP_V1_RELEASE_READINESS.md). No tag,
+GitHub release, package publication, or other release artifact was created as part of
+this milestone; public release was deliberately deferred to Milestone 5.
 
-## Version 1 Non-goals
+## Milestone 5: 0.1.0 Public Launch
+
+**Status:** Complete
+
+- Replace the repository front page with a concise end-user explanation, installation
+  path, example, and hands-on test checklist.
+- Move architecture, capture boundaries, hook mechanics, contributor validation, and
+  other implementation detail to a dedicated technical reference.
+- Distinguish the `0.1.0` product release from storage schema 1 throughout release-facing
+  documentation and fixtures.
+- Re-run deterministic validation, verify download-facing links and documentation, and
+  preserve the already accepted release assets byte-for-byte.
+- Create and push the `v0.1.0` tag from synchronized `main` after explicit authorization.
+- Publish the GitHub release so users can download the tagged source archives and test the
+  documented installation path.
+
+**Exit criterion:** A new user can understand the product from the front page, download
+the public 0.1.0 release, install standard capture, run the example, and find the deeper
+technical material without the README becoming an implementation specification.
+
+Completed on 2026-09-17 after the owner explicitly authorized tagging and publication.
+The GitHub release is the distribution artifact; no separate language-package publication
+was invented for this documentation-and-local-assets project. User testing remains
+welcome through the front-page checklist and issue tracker. Release notes are in
+[`RELEASE_NOTES_0.1.0.md`](RELEASE_NOTES_0.1.0.md). The publication gate passed all 50
+deterministic tests and 80 repeated concurrency/failure-injection invocations.
+
+## 0.1.0 Non-goals
 
 - Codex CLI as a supported capture environment.
 - The Codex IDE extension.

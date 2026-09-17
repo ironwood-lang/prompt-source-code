@@ -1,11 +1,14 @@
-# Codex Desktop Version 1 Release Readiness
+# Codex Desktop 0.1.0 Release Readiness
 
 ## Status
 
 The final Milestone 4 clean-project acceptance run passed on 2026-09-17. The
 schema-1 format and release bundle are frozen, the final Desktop cases passed, and the
-repository is ready for an explicitly authorized version 1 tag. No version tag, GitHub
+repository is ready for the explicitly authorized `v0.1.0` tag. No version tag, GitHub
 release, or package publication was created, and no other release artifact was created.
+
+This report freezes the pre-publication Milestone 4 state. The owner later authorized the
+`v0.1.0` tag and GitHub publication as Milestone 5.
 
 ## Tested environment and dates
 
@@ -88,7 +91,7 @@ The final pre-commit run passed all 49 `unittest` cases. Four concurrency and
 failure-injection tests covering simultaneous prompt processes, prompt/interrupt races,
 agent/interrupt races, and pre-replacement atomic failure were then repeated 20 times
 each: 80 of 80 stress invocations passed. The suite also validated Markdown fences and
-internal links, frozen release-asset hashes and byte counts, malformed and non-version-1
+internal links, frozen release-asset hashes and byte counts, malformed and non-schema-1
 history rejection, inert event scope, and the absence of network or Git operations in
 hook code. Every JSON file parsed with the standard library, Python sources compiled,
 `git diff --check` passed, and independent repository-boundary checks found no live
@@ -125,18 +128,19 @@ No unresolved release-bundle defect remained after the final validation cases.
 
 ## Supported scope and remaining limitations
 
-Version 1 supports the tested local Codex Desktop on macOS workflow. Standard capture is
-model-mediated and does not independently verify its own output. Hook capture remains an
-explicit local enhancement requiring separate review, trust, enablement, and a Desktop
-restart. Version 1 does not claim live capture support for Codex CLI, the IDE extension,
-cloud tasks, Windows, Linux, network filesystems, other agents, or automatic provenance
-publication. Detailed distinctions and upgrade rules are in
+PromptSourceCode 0.1.0 supports the tested local Codex Desktop on macOS workflow. Standard
+capture is model-mediated and does not independently verify its own output. Hook capture
+remains an explicit local enhancement requiring separate review, trust, enablement, and a
+Desktop restart. Release 0.1.0 does not claim live capture support for Codex CLI, the IDE
+extension, cloud tasks, Windows, Linux, network filesystems, other agents, or automatic
+provenance publication. Detailed distinctions and upgrade rules are in
 [`COMPATIBILITY.md`](COMPATIBILITY.md).
 
 ## Release decision
 
-### Ready for an explicitly authorized tag?
+### Ready for the explicitly authorized `v0.1.0` tag?
 
 Yes. The source, documentation, frozen assets, automated checks, and final Desktop
-acceptance evidence are ready for an explicitly authorized version 1 tag and publication.
-Tagging and publishing remain intentionally pending a separate explicit instruction.
+acceptance evidence are ready for the explicitly authorized `v0.1.0` tag and publication.
+At the close of Milestone 4, tagging and publishing remained intentionally pending a
+separate explicit instruction; that authorization was later supplied for Milestone 5.

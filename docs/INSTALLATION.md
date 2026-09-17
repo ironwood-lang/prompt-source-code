@@ -1,6 +1,7 @@
-# Install and Operate PromptSourceCode Version 1
+# Install and Operate PromptSourceCode 0.1.0
 
-PromptSourceCode version 1 captures Codex Desktop interactions in a local Git project.
+PromptSourceCode 0.1.0 captures Codex Desktop interactions in a local Git project and
+implements storage schema 1.
 Standard capture is the complete default. Optional hooks improve prompt matching and
 record trusted interruptions, but they do not replace the standard instructions.
 
@@ -171,9 +172,9 @@ other ordinary project files retain the project's normal Git workflow.
 ## 12. Upgrade an earlier installation
 
 Read [`COMPATIBILITY.md`](COMPATIBILITY.md), replace only the marked standard block, and
-leave existing version 1 history and assets byte-for-byte intact. Update optional hook
+leave existing schema-1 history and assets byte-for-byte intact. Update optional hook
 files through the disable-copy-review-trust-restart sequence above.
 
-If the history's first line is not the exact version 1 marker, stop. Do not overwrite,
+If the history's first line is not the exact schema-1 marker, stop. Do not overwrite,
 append, or silently migrate it. Preserve the file and use guidance for the schema it
-declares. PromptSourceCode version 1 does not ship an automatic migration tool.
+declares. PromptSourceCode 0.1.0 does not ship an automatic migration tool.

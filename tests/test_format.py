@@ -13,6 +13,7 @@ ARTIFACTS = ROOT / "tests" / "fixtures" / "artifacts.json"
 SPEC = ROOT / "docs" / "PROMPT_SOURCE_FORMAT.md"
 TEMPLATE = ROOT / "templates" / "AGENTS.prompt-source-standard.md"
 README = ROOT / "README.md"
+TECHNICAL = ROOT / "docs" / "TECHNICAL_REFERENCE.md"
 MANUAL = ROOT / "docs" / "MANUAL_CODEX_DESKTOP_VALIDATION.md"
 ROADMAP = ROOT / "docs" / "ROADMAP.md"
 OPTIONAL_HOOKS = ROOT / "docs" / "OPTIONAL_HOOKS.md"
@@ -434,21 +435,44 @@ class FormatFixtureTests(unittest.TestCase):
         for phrase in required_phrases:
             self.assertIn(" ".join(phrase.split()), normalized_template)
 
-    def test_readme_documents_standard_capture_lifecycle(self):
+    def test_readme_is_end_user_front_page_and_moves_technical_detail(self):
         readme = " ".join(README.read_text(encoding="utf-8").split())
+        technical = " ".join(TECHNICAL.read_text(encoding="utf-8").split())
         required_phrases = [
-            "Install in a new or existing project",
-            "Update the instruction block",
-            "Disable or re-enable future capture",
-            "Remove instructions or generated history",
-            "agent-behavior restriction, not an automatic `.gitignore` rule",
-            "Never copy it into an end-user project",
-            "Optional Hook-Assisted Capture",
-            "separate `/hooks` review and trust",
-            "Never bypass hook trust",
+            "The prompt history is the new source code",
+            "Why use it?",
+            "Download the latest PromptSourceCode release",
+            "if a root `AGENTS.md` already exists, append the complete template",
+            "That is the complete basic installation",
+            "Try it",
+            "A simple example",
+            "Your history stays under your control",
+            "Test 0.1.0 and tell us how it went",
+            "Technical reference for maintainers and advanced users",
         ]
         for phrase in required_phrases:
             self.assertIn(" ".join(phrase.split()), readme)
+        for implementation_phrase in (
+            "UserPromptSubmit",
+            "project-directory serialization",
+            "optimistic entry digests",
+            "same-directory atomic replacement",
+            "python3 -m unittest",
+        ):
+            self.assertNotIn(implementation_phrase, readme)
+
+        for phrase in (
+            "PromptSourceCode 0.1.0 implements storage schema 1",
+            "Canonical project output",
+            "Capture boundary",
+            "Standard capture lifecycle",
+            "Optional hook-assisted capture",
+            "UserPromptSubmit",
+            "same-directory atomic replacement",
+            "Generated history and Git",
+            "Contributor validation",
+        ):
+            self.assertIn(" ".join(phrase.split()), technical)
 
     def test_hook_contract_and_lifecycle_documentation_are_aligned(self):
         spec = " ".join(SPEC.read_text(encoding="utf-8").split())
@@ -507,7 +531,7 @@ class FormatFixtureTests(unittest.TestCase):
             "does not claim capture-environment support",
             "Do not rewrite, renumber, normalize, or recreate existing schema-1 entries",
             "Modifying a command or handler property invalidates the prior decision",
-            "Version 1 makes no promise that such a tool exists",
+            "PromptSourceCode 0.1.0 makes no promise that such a tool exists",
         ]
         for phrase in required_spec:
             self.assertIn(" ".join(phrase.split()), spec)
@@ -537,10 +561,23 @@ class FormatFixtureTests(unittest.TestCase):
         for phrase in required:
             self.assertIn(" ".join(phrase.split()), guide)
 
+    def test_roadmap_defines_the_0_1_0_public_launch(self):
+        roadmap = " ".join(ROADMAP.read_text(encoding="utf-8").split())
+        for phrase in (
+            "Milestone 5: 0.1.0 Public Launch",
+            "**Status:** Complete",
+            "Create and push the `v0.1.0` tag",
+            "Publish the GitHub release",
+            "new user can understand the product from the front page",
+            "no separate language-package publication",
+            "RELEASE_NOTES_0.1.0.md",
+        ):
+            self.assertIn(" ".join(phrase.split()), roadmap)
+
     def test_copyable_release_assets_match_the_frozen_manifest(self):
         manifest = json.loads(RELEASE_MANIFEST.read_text(encoding="utf-8"))
         self.assertEqual(manifest["prompt_source_schema"], 1)
-        self.assertEqual(manifest["release"], "version 1")
+        self.assertEqual(manifest["release"], "0.1.0")
         expected_paths = {
             "templates/AGENTS.prompt-source-standard.md",
             "hooks/hooks.json.example",
@@ -556,13 +593,13 @@ class FormatFixtureTests(unittest.TestCase):
     def test_release_readiness_report_exists_and_does_not_claim_publication(self):
         report = " ".join(READINESS.read_text(encoding="utf-8").split())
         for phrase in (
-            "Version 1 Release Readiness",
+            "0.1.0 Release Readiness",
             "Disposable project isolation",
             "Case-by-case outcomes",
             "Automated validation",
             "Final storage topology",
             "Defects found and resolutions",
-            "Ready for an explicitly authorized tag",
+            "Ready for the explicitly authorized `v0.1.0` tag",
             "No version tag, GitHub release, or package publication was created",
         ):
             self.assertIn(" ".join(phrase.split()), report)

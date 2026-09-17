@@ -1,0 +1,159 @@
+# PromptSourceCode 0.1.0 Technical Reference
+
+This document contains the architecture, format boundaries, lifecycle behavior,
+validation status, and contributor information deliberately omitted from the end-user
+front page. PromptSourceCode 0.1.0 implements storage schema 1.
+
+## Architecture
+
+PromptSourceCode targets Codex Desktop and provides two capture layers:
+
+1. **Standard capture:** repository instructions in `AGENTS.md`. This is the complete,
+   required default and works without hooks, plugins, background services, or network
+   access.
+2. **Hook-assisted capture:** an explicitly enabled optional enhancement using
+   `UserPromptSubmit` and `Interrupt`. Hooks improve prompt fidelity, identify mid-turn
+   steering through turn metadata, and record button-only interruptions.
+
+A skill is not part of the capture path because skill selection is conditional. Hooks do
+not replace the `AGENTS.md` instructions; they enhance them.
+
+## Canonical project output
+
+All chronological text and provenance history lives in one file at the project root:
+
+```text
+PROMPT_SOURCE.md
+```
+
+Preserved artifacts live in one flat directory:
+
+```text
+prompt_source_assets/
+```
+
+PromptSourceCode does not create per-prompt directories or separate input, status,
+result, runtime-context, event-log, or persistent lock files.
+
+## Capture boundary
+
+For text, PromptSourceCode preserves the exact representation delivered by Codex Desktop
+to the agent. It does not claim to preserve raw keystrokes or editor state from before
+Desktop serializes a submission.
+
+Attached files can be preserved byte-for-byte when Desktop exposes their source paths.
+Pasted images can be preserved byte-for-byte from the temporary files materialized by
+Desktop, but those files may be encoded differently from the images that existed before
+they entered the clipboard.
+
+The complete frozen schema is defined in
+[`PROMPT_SOURCE_FORMAT.md`](PROMPT_SOURCE_FORMAT.md).
+
+## Release status and evidence
+
+Milestones 0 through 4 established feasibility, the format and instruction contract,
+standard capture, optional hooks, and the frozen release candidate. Milestone 5 prepared
+the end-user onboarding surface and public 0.1.0 release.
+
+Standard capture was validated from the first prompt in a clean disposable local Git
+project with no hook, skill, plugin, background service, or network dependency. Its run
+covered follow-ups, in-turn steering, corrections, no-change work, artifacts, real
+Stop-button recovery, lifecycle controls, final structure, and practical Git behavior.
+
+The optional hook enhancement was validated in a fresh disposable project using Codex
+Desktop 26.911.61220 (9647) on macOS 26.6.2. That run covered explicit trust and restart,
+exact event-text capture, ordinary follow-ups, same-turn steering, repeated identical
+prompts, agent enrichment without duplication, correction, artifact enrichment, a real
+trusted interruption, guarded hook failure with standard fallback, concurrent and
+failure-injected writes, Git isolation, and standard capture after both hooks were
+disabled.
+
+The final clean-project acceptance run rechecked initial capture, follow-ups, in-turn
+steering, corrections, no-change work, artifacts, lifecycle controls, exact hook capture,
+one-to-one matching, a trusted interruption, guarded failure, disabled-hook fallback,
+final structure, and Git isolation. Deterministic tests cover concurrency, interruption
+races, atomic failure, malformed histories, repeated prompts, dynamic fences, and newline
+states.
+
+Evidence is preserved in:
+
+- [`CODEX_DESKTOP_STANDARD_CAPTURE_VALIDATION.md`](CODEX_DESKTOP_STANDARD_CAPTURE_VALIDATION.md)
+- [`CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md`](CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md)
+- [`CODEX_DESKTOP_V1_RELEASE_READINESS.md`](CODEX_DESKTOP_V1_RELEASE_READINESS.md)
+- [`CODEX_DESKTOP_CAPTURE_EXPERIMENT.md`](CODEX_DESKTOP_CAPTURE_EXPERIMENT.md)
+- [`ROADMAP.md`](ROADMAP.md)
+
+## Standard capture lifecycle
+
+Install the complete contents of
+[`../templates/AGENTS.prompt-source-standard.md`](../templates/AGENTS.prompt-source-standard.md)
+in the captured project's root `AGENTS.md`. In an existing file, append the marked block
+without replacing unrelated instructions. The root [`../AGENTS.md`](../AGENTS.md) in this
+development repository is contributor guidance and must not be copied into an end-user
+project.
+
+The template contains an enabled/disabled control and stable begin/end markers. Updating
+replaces the complete marked block without rewriting existing history. Disabling stops
+future standard capture but leaves generated data untouched. Removing the block also
+leaves existing history intact unless the user separately chooses to delete it.
+
+The full operational procedure is in [`INSTALLATION.md`](INSTALLATION.md).
+
+## Optional hook-assisted capture
+
+The optional enhancement consists of two inert Python source files and one example hook
+definition under [`../hooks/`](../hooks/). It uses only `UserPromptSubmit` and `Interrupt`.
+Copying the files does not activate them. The project owner must separately review,
+enable, and trust both definitions through Codex CLI `/hooks`, then fully restart Desktop.
+
+`UserPromptSubmit` atomically creates a canonical Hook-assisted entry before agent work.
+The agent claims the earliest exact session, turn, and byte match and enriches it instead
+of adding a duplicate. The handler validates that the hook transcript belongs to a
+user-created Codex Desktop task, excluding subagents and internal feature prompts.
+Repeated identical submissions remain distinct.
+
+`Interrupt` changes unfinished hook-assisted interactions in the exact matching session
+and turn to the canonical Interrupted state while preserving completed entries and
+captured input.
+
+Hook and agent-helper writes share project-directory serialization, full structural
+validation, optimistic entry digests, and same-directory atomic replacement. They leave
+no persistent lock or diagnostic log and perform no network or Git operations. A guarded
+handler failure returns control to Desktop so the standard instruction-mediated path can
+remain available.
+
+Trust is bound to each exact hook definition. Any definition change requires another
+review, trust decision, and Desktop restart. Never bypass hook trust. Installation,
+updating, disabling, removal, and troubleshooting are documented in
+[`OPTIONAL_HOOKS.md`](OPTIONAL_HOOKS.md).
+
+## Generated history and Git
+
+PromptSourceCode does not stage, commit, push, publish, or upload generated
+`PROMPT_SOURCE.md` or `prompt_source_assets/` unless the user explicitly requests it.
+
+This restriction applies only to generated provenance. It does not change the tracked
+project's normal Git workflow for source code, tests, documentation, or other files. It is
+an agent-behavior restriction, not an automatic `.gitignore` rule; generated history
+normally remains visible as unstaged working-tree data for inspection.
+
+## Compatibility and upgrades
+
+The product release and storage schema are separate version axes: PromptSourceCode 0.1.0
+implements schema 1. Existing valid schema-1 histories and artifacts are preserved during
+updates. Unknown, malformed, incompatible, or future schemas are not silently repaired or
+migrated. See [`COMPATIBILITY.md`](COMPATIBILITY.md) for the tested environment and upgrade
+policy.
+
+## Contributor validation
+
+Run the deterministic contract checks with:
+
+```text
+python3 -m unittest discover -s tests -v
+```
+
+The copyable standard and hook files are frozen by byte count and SHA-256 in
+[`../tests/fixtures/release-manifest.json`](../tests/fixtures/release-manifest.json).
+Development must follow the root [`../AGENTS.md`](../AGENTS.md), keep documentation and
+tests aligned, and never enable live capture in this repository.

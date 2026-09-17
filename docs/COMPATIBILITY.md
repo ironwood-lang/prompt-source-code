@@ -1,4 +1,4 @@
-# Version 1 Compatibility and Upgrade Policy
+# PromptSourceCode 0.1.0 Compatibility and Upgrade Policy
 
 ## Two different compatibility questions
 
@@ -8,30 +8,33 @@ particular Codex host, operating system, filesystem, Python runtime, and Git wor
 been exercised end to end. A format-compatible history does not imply that every
 environment is supported for live capture.
 
-## Version 1 format compatibility
+PromptSourceCode 0.1.0 is the product release. Schema 1 is the storage-format version.
+Those version numbers are intentionally independent.
 
-Version 1 histories begin with the exact first line:
+## Schema-1 format compatibility
+
+Schema-1 histories begin with the exact first line:
 
 ```text
 <!-- prompt-source-schema: 1 -->
 ```
 
 Schema 1 is frozen by [`PROMPT_SOURCE_FORMAT.md`](PROMPT_SOURCE_FORMAT.md). A compatible
-version 1 implementation must preserve existing entry order, immutable captured fields,
+schema-1 implementation must preserve existing entry order, immutable captured fields,
 artifact bytes, and the two-output storage topology. Missing entry numbers remain missing;
 valid histories are never renumbered merely to become contiguous.
 
 The schema number is the format compatibility boundary, not the PromptSourceCode product
 release number. Documentation clarifications, test additions, and implementation fixes
-may remain schema 1 only when they do not change the interpretation of valid version 1
-bytes or make a valid version 1 history invalid. A change to required topology, field
+may remain schema 1 only when they do not change the interpretation of valid schema-1
+bytes or make a valid schema-1 history invalid. A change to required topology, field
 meaning, payload reconstruction, lifecycle semantics, or artifact fidelity requires a
 new schema marker and explicit migration guidance.
 
 Writers must stop without modifying a history that has an absent, malformed, truncated,
 incompatible, or future schema marker. They also stop on malformed fences, duplicate or
 non-increasing structural headings, stale optimistic digests, and other structural
-conflicts. Version 1 never treats an unknown schema as an empty history and never silently
+conflicts. Schema 1 never treats an unknown schema as an empty history and never silently
 upgrades it.
 
 ## Tested capture environments
@@ -42,20 +45,20 @@ Release evidence establishes the following environments:
 | --- | --- | --- |
 | Standard capture | Codex Desktop 26.908.70816 (9275), macOS 26.6.2 (25G83), local Git project | [Milestone 2 validation](CODEX_DESKTOP_STANDARD_CAPTURE_VALIDATION.md) |
 | Optional hooks | Codex Desktop 26.911.61220 (9647), macOS 26.6.2 (25G83), `/usr/bin/python3` 3.9.6, local Git project | [Milestone 3 validation](CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md) |
-| Final version 1 bundle | Codex Desktop / ChatGPT app 26.911.61220 (9647), macOS 26.6.2 (25G83), `/usr/bin/python3` 3.9.6, Git 2.54.0 (Apple Git-157), local Git project | [Version 1 release readiness](CODEX_DESKTOP_V1_RELEASE_READINESS.md) |
+| Final 0.1.0 bundle | Codex Desktop / ChatGPT app 26.911.61220 (9647), macOS 26.6.2 (25G83), `/usr/bin/python3` 3.9.6, Git 2.54.0 (Apple Git-157), local Git project | [0.1.0 release readiness](CODEX_DESKTOP_V1_RELEASE_READINESS.md) |
 
 Standard capture has no Python runtime dependency. The optional implementation is tested
 with the system Python listed above and uses macOS/POSIX file locking and atomic local
 filesystem replacement. Git is used for the captured project's ordinary workflow and
 project discovery; hooks themselves execute no Git commands.
 
-These results support PromptSourceCode version 1 for the tested local Codex Desktop on
-macOS workflow. They do not claim that every later Desktop, macOS, Python, or Git version
+These results support PromptSourceCode 0.1.0 for the tested local Codex Desktop on macOS
+workflow. They do not claim that every later Desktop, macOS, Python, or Git version
 behaves identically.
 
-## Untested environments and version 1 non-goals
+## Untested environments and 0.1.0 non-goals
 
-Version 1 does not claim capture-environment support for:
+Release 0.1.0 does not claim capture-environment support for:
 
 - Codex CLI, except using `/hooks` to review, enable, disable, and trust optional hooks;
 - the Codex IDE extension, Codex cloud, ChatGPT cloud tasks, or remote capture;
@@ -65,7 +68,7 @@ Version 1 does not claim capture-environment support for:
 - a skill, plugin, background service, or network service as a required capture path; or
 - automatic publication or synchronization of generated provenance.
 
-A version 1 history may still be readable on an untested platform. That is format
+A schema-1 history may still be readable on an untested platform. That is format
 compatibility, not evidence of supported live capture.
 
 ## Upgrade within schema 1
@@ -95,11 +98,12 @@ raw hash; review the exact definition and do not invent a hash or bypass trust.
 ## Encountering another schema
 
 If the first line is not `<!-- prompt-source-schema: 1 -->`, preserve the history and its
-assets unchanged and stop version 1 writes. Determine which PromptSourceCode version owns
-that schema before taking further action. Do not prepend a version 1 header, copy entries
-into a new file, or reuse version 1 hook helpers against the unknown history.
+assets unchanged and stop schema-1 writes. Determine which PromptSourceCode version owns
+that schema before taking further action. Do not prepend a schema-1 header, copy entries
+into a new file, or reuse schema-1 hook helpers against the unknown history.
 
 A future PromptSourceCode release may provide explicit migration instructions or a
-separately validated migration tool. Version 1 makes no promise that such a tool exists
-and performs no automatic migration. Any future migration must preserve the original
-history and artifacts until the user deliberately accepts a documented conversion.
+separately validated migration tool. PromptSourceCode 0.1.0 makes no promise that such a
+tool exists and performs no automatic migration. Any future migration must preserve the
+original history and artifacts until the user deliberately accepts a documented
+conversion.
