@@ -6,8 +6,8 @@ Most AI-assisted projects keep the finished files but lose the conversation that
 them. PromptSourceCode keeps that story with the project: what you asked for, what you
 changed your mind about, what you attached, and what the agent ultimately did.
 
-That makes it easier for you—or the next person—to understand not only *what* was built,
-but *why* it was built that way.
+That makes it easier for you, or the next person, to understand not only *what* was built,
+but *why* and *how* it was built that way.
 
 ## Why use it?
 
