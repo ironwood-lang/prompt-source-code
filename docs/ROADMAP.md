@@ -173,6 +173,39 @@ welcome through the front-page checklist and issue tracker. Release notes are in
 [`RELEASE_NOTES_0.1.0.md`](RELEASE_NOTES_0.1.0.md). The publication gate passed all 50
 deterministic tests and 80 repeated concurrency/failure-injection invocations.
 
+## Milestone 6: Dedicated Capture Instruction File
+
+**Status:** Planned
+
+- Replace the full inline PromptSourceCode block in the project-root `AGENTS.md` with a
+  tiny, clearly marked loader block that directs Codex to read the complete capture
+  contract from a dedicated, versioned file inside the project.
+- Choose and freeze the dedicated file's canonical project-relative path and define how
+  the loader coexists with a project's existing `AGENTS.md` instructions.
+- Keep the loader independent of user-specific fallback filenames, global Codex
+  configuration, skills, plugins, hooks, background services, and network access.
+- Validate that Codex Desktop reads the dedicated file before capture begins in new tasks,
+  including tasks opened at the repository root and work governed by nested instruction
+  files.
+- Define conservative behavior when the loader or dedicated file is missing, unreadable,
+  stale, conflicting, or truncated, without deleting or rewriting captured history.
+- Preserve the full-inline 0.1.0 installation as a compatible capture path and provide a
+  deliberate upgrade procedure that does not rewrite existing `PROMPT_SOURCE.md` history
+  or `prompt_source_assets/` artifacts.
+- Update installation, updating, disabling, re-enabling, removal, troubleshooting, and
+  compatibility documentation for the loader-based layout.
+- Add deterministic tests for loader markers, path consistency, upgrade safety, inert
+  optional hooks, and the absence of PromptSourceCode-specific global configuration.
+- Run a fresh clean-project Codex Desktop acceptance test demonstrating that the compact
+  loader produces the same standard-capture behavior as the full inline contract before
+  recommending the new layout in the README.
+
+**Exit criterion:** A new user can keep only a small PromptSourceCode loader block in the
+project-root `AGENTS.md`, keep the complete capture instructions in the documented
+dedicated project file, and obtain the same validated standard-capture behavior without
+per-user Codex configuration. Existing 0.1.0 installations and captured histories remain
+valid and require no rewriting.
+
 ## 0.1.0 Non-goals
 
 - Codex CLI as a supported capture environment.
