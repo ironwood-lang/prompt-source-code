@@ -3,12 +3,12 @@
   "prompt_source_schema": 1,
   "files": {
     "templates/AGENTS.prompt-source-loader.md": {
-      "byte_count": 1052,
-      "sha256": "b52316ce4f1035b6d0e49d69b2c7460227f57bd0924852a9b7149d6c190dde69"
+      "byte_count": 1196,
+      "sha256": "54826a796d928f13b1fea4253d6a43a300c506c4fc5b02e3ab70658aa61014e1"
     },
     "templates/prompt-source-instructions-v1.md": {
-      "byte_count": 6058,
-      "sha256": "27610b940e4efbce2a4350bb50f2a43554f2ea7424424ac941ec47c4655248f8"
+      "byte_count": 6093,
+      "sha256": "487ecb60bd225cae248df1752fa73f83e93d57c8ec376ce5f59542a28a135231"
     },
     "scripts/instruction_contract.py": {
       "byte_count": 9712,

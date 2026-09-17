@@ -30,6 +30,14 @@ class InstructionContractTests(unittest.TestCase):
         self.assertEqual(instructions.splitlines()[0], contract.INSTRUCTIONS_BEGIN)
         self.assertEqual(instructions.splitlines()[-1], contract.INSTRUCTIONS_END)
         self.assertIn(f"`{contract.VALIDATE_HISTORY_COMMAND}`", instructions)
+        self.assertIn("git rev-parse --show-toplevel", loader)
+        self.assertIn("never the current or nested directory", loader)
+        normalized_instructions = " ".join(instructions.split())
+        self.assertIn("Desktop attachment/paste envelope", normalized_instructions)
+        self.assertIn(
+            "user input is the text after `## My request:`",
+            normalized_instructions,
+        )
         self.assertLessEqual(loader_size.words, contract.MAX_LOADER_WORDS)
         self.assertLessEqual(loader_size.bytes, contract.MAX_LOADER_BYTES)
         self.assertLessEqual(instruction_size.words, contract.MAX_INSTRUCTIONS_WORDS)
@@ -157,6 +165,37 @@ class InstructionContractTests(unittest.TestCase):
             self.assertEqual(
                 result.stdout.strip(),
                 "PromptSourceCode: history valid (12 entries)",
+            )
+
+    def test_dedicated_instruction_path_resolves_from_nested_git_project(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            subprocess.run(
+                ["git", "init", "-q", "-b", "main"],
+                cwd=project,
+                check=True,
+            )
+            contract.install(project)
+            nested = project / "packages/demo"
+            nested.mkdir(parents=True)
+
+            result = subprocess.run(
+                ["git", "rev-parse", "--show-toplevel"],
+                cwd=nested,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            resolved = Path(result.stdout.strip()) / contract.CANONICAL_INSTRUCTIONS
+
+            self.assertEqual(
+                resolved.resolve(),
+                (project / contract.CANONICAL_INSTRUCTIONS).resolve(),
+            )
+            self.assertEqual(
+                resolved.read_bytes(),
+                contract.INSTRUCTIONS_TEMPLATE.read_bytes(),
             )
 
     def test_missing_unreadable_stale_conflicting_and_truncated_files_fail_closed(self):

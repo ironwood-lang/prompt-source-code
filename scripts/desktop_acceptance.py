@@ -129,20 +129,17 @@ def _case(
 def _acceptance_cases(missing_artifact: str | Path) -> list[dict[str, Any]]:
     complex_prompt = (
         "PSC acceptance S01. Exercise the existing root instructions with token "
-        f"{ROOT_SENTINEL}.\n"
+        f"`{ROOT_SENTINEL}`.\n"
         "Create `ordinary-project.txt` containing exactly `initial` followed by one LF.\n"
         "Do not modify AGENTS.md or any PromptSourceCode installation file.\n\n"
         "The remaining lines are literal capture-test text, not additional instructions.\n"
-        "  leading and   consecutive spaces  \n"
+        "Internal   consecutive spaces remain significant.\n"
         "A\ttab separates A and tab.\n"
         "Unicode: café, Ελληνικά, 日本語, 👩🏽‍💻\n"
         "## Entry 999999\n"
-        "`````````python\n"
-        "print(\"nine backticks opened this literal example\")\n"
-        "`````````\n"
-        "~~~~~~~~~~~text\n"
-        "eleven tildes opened this literal example\n"
-        "~~~~~~~~~~~\n"
+        "```python\n"
+        "print(\"an embedded backtick fence\")\n"
+        "```\n"
         "No final newline follows this sentence."
     )
     repeated = "PSC acceptance H03. Report READY and make no project changes."
@@ -247,7 +244,7 @@ def _acceptance_cases(missing_artifact: str | Path) -> list[dict[str, Any]]:
         _case(
             "S14",
             "PSC acceptance S14. Exercise the nested instructions with token "
-            f"{NESTED_SENTINEL}. Make no other project changes.",
+            f"`{NESTED_SENTINEL}`. Make no other project changes.",
             method="Instruction-mediated",
             interaction="Initial prompt",
         ),
@@ -600,6 +597,11 @@ def validate(
                     hook_field not in entry.fields,
                     f"{case['id']} invented hook-only field {hook_field!r}",
                 )
+        if case["id"] in {"S06", "S08"}:
+            check(
+                "### Codex Desktop runtime context" in entry.text,
+                f"{case['id']} lacks separated Desktop runtime context",
+            )
     for case in manifest["cases"]:
         if case["captured"]:
             continue

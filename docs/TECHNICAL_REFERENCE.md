@@ -109,6 +109,8 @@ matching validator, and leaves nested instructions untouched.
 
 The loader contains the enabled/disabled control and exact begin/end markers. Updating
 replaces only that block, the dedicated file, and the validator without rewriting history.
+It resolves the canonical instruction path from `git rev-parse --show-toplevel`, including
+when Codex Desktop opens a nested directory as a separate project.
 Missing, unreadable, stale, conflicting, or truncated instructions—or a missing or
 noncanonical validator—fail closed for capture while ordinary work continues under other
 applicable project instructions. Disabling or removing the standard installation leaves

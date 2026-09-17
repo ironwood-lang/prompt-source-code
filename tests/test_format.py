@@ -413,6 +413,8 @@ class FormatFixtureTests(unittest.TestCase):
             "prompt-source-loader-end",
             "Capture: enabled",
             ".prompt-source/instructions-v1.md",
+            "resolve the Git root with `git rev-parse --show-toplevel`",
+            "never the current or nested directory",
             "before creating a capture entry or doing requested work",
             "root and nested `AGENTS.md`",
             "missing, unreadable, wrong-version, stale, conflicting, or truncated",
@@ -423,7 +425,7 @@ class FormatFixtureTests(unittest.TestCase):
             self.assertIn(" ".join(phrase.split()), loader)
 
         required_phrases = [
-            "Before work capture each prompt",
+            "Before work capture all prompts",
             "Capture method: Instruction-mediated",
             "Status: In progress",
             "Completion reason unavailable; no reliable Interrupt event was observed.",
@@ -448,6 +450,9 @@ class FormatFixtureTests(unittest.TestCase):
             "current Desktop task's first submission",
             "standard uses `Unknown` unless reliably exposed",
             "any backtick and no tilde requires `~~~text`, not ```text",
+            "Desktop attachment/paste envelope",
+            "user input is the text after `## My request:`",
+            "factual path-free summary",
             "Steering` for every active-turn submission",
             "has no trusted Stop reason",
             "#### Artifact 1",

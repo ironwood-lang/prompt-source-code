@@ -60,7 +60,9 @@ no final newline, add a newline and one blank line before the loader. Never appe
 either marker already exists; inspect and update the one bounded block instead.
 
 Root and nested project instructions continue to apply. The loader explicitly makes the
-dedicated capture contract supplemental rather than a replacement.
+dedicated capture contract supplemental rather than a replacement. Its canonical path is
+relative to the Git root, not the current directory, so a task opened at a nested project
+directory still reads the one root installation and writes one root history.
 
 ## 2. Verify the first capture
 

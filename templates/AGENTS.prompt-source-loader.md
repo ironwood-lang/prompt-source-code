@@ -5,8 +5,10 @@
 - Capture: enabled
 - Instructions: `.prompt-source/instructions-v1.md`
 
-When capture is enabled, before creating a capture entry or doing requested work, read
-that file completely. Require its first line to be
+When capture is enabled, resolve the Git root with `git rev-parse --show-toplevel`; the
+instruction path is relative to that root, never the current or nested directory. Read
+that file completely before creating a capture entry or doing requested work. Require its
+first line to be
 `<!-- prompt-source-instructions: 1 -->` and its final line to be
 `<!-- prompt-source-instructions-end -->`. Follow it together with every applicable root
 and nested `AGENTS.md`; it never replaces project instructions.

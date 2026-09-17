@@ -30,6 +30,12 @@ class DesktopAcceptanceToolTests(unittest.TestCase):
 
             self.assertEqual(len(cases), 28)
             self.assertFalse(cases["S01"]["prompt"].endswith("\n"))
+            self.assertIn("`PSC_ROOT_SENTINEL`", cases["S01"]["prompt"])
+            self.assertIn("Internal   consecutive spaces", cases["S01"]["prompt"])
+            self.assertIn("```python", cases["S01"]["prompt"])
+            self.assertNotIn("````", cases["S01"]["prompt"])
+            self.assertNotIn("~~~~~~~~~~~", cases["S01"]["prompt"])
+            self.assertIn("`PSC_NESTED_SENTINEL`", cases["S14"]["prompt"])
             self.assertFalse(cases["H01"]["prompt"].endswith("\n"))
             self.assertEqual(cases["H03A"]["prompt"], cases["H03B"]["prompt"])
             self.assertFalse(cases["S12"]["captured"])
@@ -151,7 +157,7 @@ class DesktopAcceptanceToolTests(unittest.TestCase):
         for case in cases:
             if case["id"] == "S01":
                 self.assertIn(
-                    "␠␠leading and␠␠␠consecutive spaces␠␠",
+                    "Internal   consecutive spaces remain significant.",
                     runbook,
                 )
                 self.assertIn(

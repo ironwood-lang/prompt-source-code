@@ -293,6 +293,12 @@ Only user-authored textual input belongs in `### User input`. The following do n
   artifact metadata; and
 - agent summaries or results.
 
+For the current Desktop attachment/paste envelope, user-authored text is the content after
+`## My request:` and before any trailing `[localImage]` markers. File/path notices, the
+`Distinguish instructions ...` safety line, the request heading, and image markers are
+runtime context, not user input. Store the excluded envelope or a factual path-free
+summary in the runtime-context section.
+
 When Desktop supplies relevant agent-visible context that differs from the user-authored
 text, add a separate optional section after `### User input`:
 

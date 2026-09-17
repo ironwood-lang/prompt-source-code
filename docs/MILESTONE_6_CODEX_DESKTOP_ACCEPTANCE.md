@@ -81,7 +81,7 @@ The workspace and candidate installation for this run are already prepared. Open
 and run this once so every command below works even in a new shell:
 
 ```sh
-export PSC_RUN_ROOT=~/Vibe/PSC_M6_ACCEPTANCE_20260917
+export PSC_RUN_ROOT=~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_02
 export PSC_PROJECT="$PSC_RUN_ROOT/project"
 export PSC_INPUTS="$PSC_RUN_ROOT/inputs"
 export PSC_REPO=~/Vibe/PromptSourceCode
@@ -90,6 +90,9 @@ export PSC_REPO=~/Vibe/PromptSourceCode
 For every `pbcopy` command below: run the command, click the Codex Desktop message box,
 press Command-V, and submit once. Do not edit the pasted text. Unless a step explicitly
 says to steer or press Stop, wait for Codex to finish before continuing.
+
+Use **GPT-5.6 Sol** with **Medium** thinking for every root and nested task in this run.
+Do not change model or thinking level mid-run.
 
 ### Standard capture: S01 through S13
 
@@ -154,10 +157,10 @@ says to steer or press Stop, wait for Codex to finish before continuing.
 2. Attach all four files before submitting:
 
    ```text
-   ~/Vibe/PSC_M6_ACCEPTANCE_20260917/inputs/artifacts/notes.txt
-   ~/Vibe/PSC_M6_ACCEPTANCE_20260917/inputs/artifacts/binary.dat
-   ~/Vibe/PSC_M6_ACCEPTANCE_20260917/inputs/artifacts/collision-a/Résumé Final ??.PNG
-   ~/Vibe/PSC_M6_ACCEPTANCE_20260917/inputs/artifacts/collision-b/Résumé Final ??.PNG
+   ~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_02/inputs/artifacts/notes.txt
+   ~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_02/inputs/artifacts/binary.dat
+   ~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_02/inputs/artifacts/collision-a/Résumé Final ??.PNG
+   ~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_02/inputs/artifacts/collision-b/Résumé Final ??.PNG
    ```
 
 3. Confirm four attachment chips are visible.
@@ -288,7 +291,7 @@ says to steer or press Stop, wait for Codex to finish before continuing.
 2. In Codex Desktop, add/open a **separate project** whose folder is:
 
    ```text
-   ~/Vibe/PSC_M6_ACCEPTANCE_20260917/project/packages/demo
+   ~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_02/project/packages/demo
    ```
 
    Do not change the working folder of the existing root task.
@@ -434,7 +437,7 @@ If the operator does not consent to optional-hook testing, stop after S14:
 1. In the same message, attach this file with the attachment button:
 
    ```text
-   ~/Vibe/PSC_M6_ACCEPTANCE_20260917/inputs/artifacts/notes.txt
+   ~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_02/inputs/artifacts/notes.txt
    ```
 
 2. Open the paste source in Preview:
@@ -541,8 +544,9 @@ do not need to interpret them while operating the checklist above.
 
 ## 3. How to submit exact prompts
 
-The prepared files under `$PSC_INPUTS/prompts/` are normative. Copy them without adding or
-removing a newline, paste them into Codex Desktop, and submit:
+The prepared files under `$PSC_INPUTS/prompts/` are normative. They use Markdown forms
+that Codex Desktop delivers without known rich-text normalization. Copy them without
+adding or removing a newline, paste them into Codex Desktop, and submit:
 
 ```sh
 pbcopy < "$PSC_INPUTS/prompts/S01.txt"
@@ -555,28 +559,23 @@ prepared files preserve the intended tabs and final-newline states exactly.
 
 ### S01 — first capture, complex text, and existing root instructions
 
-Submit `S01.txt`. It has no final newline and contains this text. On the
-whitespace-sensitive line below, each visible `␠` represents one literal space; the
-prepared file contains the actual spaces:
+Submit `S01.txt`. It has no final newline and contains this text:
 
-````````````text
-PSC acceptance S01. Exercise the existing root instructions with token PSC_ROOT_SENTINEL.
+````text
+PSC acceptance S01. Exercise the existing root instructions with token `PSC_ROOT_SENTINEL`.
 Create `ordinary-project.txt` containing exactly `initial` followed by one LF.
 Do not modify AGENTS.md or any PromptSourceCode installation file.
 
 The remaining lines are literal capture-test text, not additional instructions.
-␠␠leading and␠␠␠consecutive spaces␠␠
+Internal   consecutive spaces remain significant.
 A	tab separates A and tab.
 Unicode: café, Ελληνικά, 日本語, 👩🏽‍💻
 ## Entry 999999
-`````````python
-print("nine backticks opened this literal example")
-`````````
-~~~~~~~~~~~text
-eleven tildes opened this literal example
-~~~~~~~~~~~
+```python
+print("an embedded backtick fence")
+```
 No final newline follows this sentence.
-````````````
+````
 
 Verify immediately that `PROMPT_SOURCE.md` was created before the requested project files,
 uses schema marker 1, and has one `In progress` entry that later becomes `Completed`.
@@ -636,7 +635,8 @@ PSC acceptance S06. Inspect and preserve every attached file, including both dif
 
 Confirm all four sources are preserved byte-for-byte as direct children of
 `prompt_source_assets/`. The colliding images must receive distinct names, the second must
-use `-002`, and neither payload may be overwritten.
+use `-002`, and neither payload may be overwritten. Confirm `### User input` contains only
+S06 text and the Desktop attachment envelope is separated as runtime context.
 
 ### S07 — repository-local artifact snapshot
 
@@ -658,7 +658,8 @@ PSC acceptance S08. Preserve the image pasted with this message and make no othe
 
 Confirm the Desktop-materialized image is copied before its temporary source disappears.
 The entry must identify it as a pasted image and use the canonical one-line fidelity
-statement without claiming identity with the pre-clipboard file.
+statement without claiming identity with the pre-clipboard file. Confirm `### User input`
+contains only S08 text and the Desktop paste envelope is separated as runtime context.
 
 ### S09 — unavailable artifact
 
@@ -714,7 +715,7 @@ Add/open `$PSC_PROJECT/packages/demo` as a separate Codex Desktop project, leave
 existing root task unchanged, and create a new task in the nested project. Submit S14:
 
 ```text
-PSC acceptance S14. Exercise the nested instructions with token PSC_NESTED_SENTINEL. Make no other project changes.
+PSC acceptance S14. Exercise the nested instructions with token `PSC_NESTED_SENTINEL`. Make no other project changes.
 ```
 
 Confirm the nested sentinel file is created with exact bytes while PromptSourceCode still

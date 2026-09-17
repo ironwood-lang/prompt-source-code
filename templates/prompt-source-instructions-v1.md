@@ -2,8 +2,8 @@
 
 # PromptSourceCode standard capture
 
-Supplement root/nested guidance. Before work capture each prompt, follow-up, steering,
-correction, repeat, and no-change request. Capture is model-mediated; never claim
+Supplement root/nested guidance. Before work capture all prompts: initial, follow-up,
+steering, correction, repeat, no-change. Model-mediated; never claim
 raw-keystroke, pre-serialization, independent, deterministic, or hook-verified fidelity.
 
 ## Hook-assisted branch
@@ -11,9 +11,8 @@ raw-keystroke, pre-serialization, independent, deterministic, or hook-verified f
 Only synthetic `PromptSourceCode hook matching context` outside user text activates hooks.
 Before work pass its JSON unchanged to `/usr/bin/python3
 .codex/hooks/prompt_source_hook.py --claim`. Enrich, never duplicate, the returned earliest
-matching `In progress`, `Hook-assisted`, `Pending` entry. Finalize through `--replace-entry`;
-preserve input, IDs, and order. If identity is unsafe, preserve it and add a standard entry
-with:
+matching `In progress`, `Hook-assisted`, `Pending` entry. Finalize via `--replace-entry`;
+preserve input, IDs, order. If identity is unsafe, preserve it and add:
 
 `- Deduplication note: Identity with a hook-created observation could not be established safely; both observations were preserved.`
 
@@ -42,19 +41,19 @@ Generated history and assets are local provenance. Do not stage, commit, push, p
 or upload them unless the user explicitly requests it.
 ```
 
-Otherwise require valid schema-1 UTF-8: canonical fences, ordered metadata, one user-input
-section per entry, increasing headings, and valid lifecycle/results. Preserve and report
-unsafe or future-schema history; work without capture.
+Otherwise require valid schema-1 UTF-8: canonical fences/metadata, one user-input section,
+increasing headings, valid lifecycle/results. Report unsafe or future-schema history; work
+without capture.
 
 Before appending, change only a known-unfinished earlier-turn standard `In progress` to
 `Incomplete`; never change current-turn entries for steering. Standard capture has no
 trusted Stop reason; always add
 `- Status reason: Completion reason unavailable; no reliable Interrupt event was observed.`
 At turn end finalize handled entries; superseded work may be `Completed`. Preserve terminal
-entries and earlier input.
+entries/input.
 
-Append at physical EOF, one above the greatest structural number and padded to six or more
-digits; never fill gaps. Re-read before writing; retry collisions. Start:
+Append at physical EOF, above the greatest structural number, padded to at least six
+digits; never fill gaps. Re-read; retry collisions. Start:
 
 ```text
 ## Entry 000001
@@ -65,21 +64,25 @@ digits; never fill gaps. Re-read before writing; retry collisions. Start:
 ```
 
 `Initial prompt`: the current Desktop task's first submission even with history. `Follow-up`:
-after a finished turn. `Steering` for every active-turn submission, even replacing values
-or saying “instead”. `Correction`: only a later turn explicitly identifying a correction
-or mistake. Only corrections use `Supersedes`; others add reliable backward `Continues`.
+after a finished turn. `Steering` for every active-turn submission, even replacing values.
+`Correction`: only a later turn explicitly identifying a correction or mistake. Only
+corrections use `Supersedes`; others add reliable backward `Continues`.
 Never rewrite history. Optional metadata:
 `Observed at`, `Session ID`, `Turn ID`, `Model`, `Agent observation`, `Deduplication note`,
 `Continues`, `Supersedes`, `Status reason`. Never invent values.
 
-Add one `### User input` containing only user-authored Desktop-delivered text. `Final
-newline`: `LF`, `CRLF`, `CR`, `None`, or `Unknown`; standard uses `Unknown` unless reliably
-exposed, never guessed `None`. If known, remove only that final sequence. Find longest
-backtick/tilde runs; choose the shorter (backticks on tie), length 3 or run+1. Always
-calculate: any backtick and no tilde requires `~~~text`, not ```text. Write literal body,
-one structural LF, then the closing fence. Hook entries require reconstructed UTF-8
-size/SHA-256; omit uncertain standard values. Put Desktop context in `### Codex Desktop
-runtime context` under the same rules.
+Add one `### User input` with only user-authored Desktop-delivered text. In a Desktop
+attachment/paste envelope, user input is the text after `## My request:` and before
+`[localImage]`. Exclude file/path notices, `Distinguish instructions ...`, that heading,
+and image markers; put excluded content or a factual path-free summary in
+`### Codex Desktop runtime context`.
+
+`Final newline`: `LF`, `CRLF`, `CR`, `None`, or `Unknown`; standard uses `Unknown` unless
+reliably exposed, never guessed `None`. If known, remove only that final sequence. Find
+longest backtick/tilde runs; choose the shorter (backticks on tie), length 3 or run+1.
+Always calculate: any backtick and no tilde requires `~~~text`, not ```text. Write literal
+body, one structural LF, then the closing fence. Hook entries require reconstructed UTF-8
+size/SHA-256; omit uncertain standard values.
 
 Re-read: the new entry must be final with increasing headings. Before work, move only this
 exact unfinished block to EOF if misplaced; otherwise stop capture.
@@ -90,11 +93,11 @@ Fix only this new entry on failure; a missing validator stops capture, not work.
 
 ## Artifacts and completion
 
-Copy accessible attachments, pasted images, and repository sources byte-for-byte as direct
-children. Name from the basename: `prompt-<entry>-<stem><extension>`. Lowercase a final
-1–16 ASCII-alphanumeric extension. In the stem replace other runs with `-`, collapse
-hyphens, remove leading dots, trim punctuation, cap at 80 characters, and use `artifact`
-if empty. Unnamed pastes use `image-001`. Reuse identical bytes; otherwise add `-002`, etc.
+Copy accessible attachments, pastes, and repository sources byte-for-byte as direct
+children. Name from basename: `prompt-<entry>-<stem><extension>`. Lowercase a final 1–16
+ASCII-alphanumeric extension. In stems replace other runs with `-`; collapse hyphens; drop
+leading dots; trim punctuation; cap at 80; use `artifact` if empty.
+Unnamed pastes use `image-001`. Reuse identical bytes; otherwise add `-002`, etc.
 Number records locally and use this exact field spelling/order:
 
 ```text
@@ -117,7 +120,7 @@ Unavailable`, and `Unavailable reason`; omit copy, size, hash, and placeholders.
 absolute external paths from artifact metadata.
 
 When done set `Completed`; add one `### Result` with a factual summary and relative changed
-file links, or `Changed files: None.` Capture files are not task-work changes. `Incomplete`
+file links, or `Changed files: None.` Capture files are not task work. `Incomplete`
 and trusted-hook `Interrupted` are terminal; input, context, IDs, chronology, and verified
 artifact facts are immutable. Never stage, commit, push, publish, or upload provenance
 unless explicitly requested; ordinary Git is unchanged.
