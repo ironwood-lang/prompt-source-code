@@ -93,5 +93,8 @@ changes may be committed and pushed directly to the intended branch. Do not open
 request merely in order to merge the work; use a pull request only when the user
 explicitly requests that workflow.
 
+Keep GitHub release bodies empty so release pages show only the downloadable files. Put
+release descriptions, instructions, and other explanatory text in `README.md` or `docs/`.
+
 The product's default Git exclusion applies only to the generated `PROMPT_SOURCE.md` and
 `prompt_source_assets/` in projects being captured.
