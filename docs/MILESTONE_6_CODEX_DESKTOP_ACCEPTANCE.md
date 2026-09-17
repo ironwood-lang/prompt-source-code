@@ -13,7 +13,7 @@ the Desktop actions, record factual results, and pass the final validator.
 Choose a new, explicit path that has never held earlier evidence:
 
 ```sh
-PSC_RUN_ROOT=/Users/your-name/path/PSC_M6_ACCEPTANCE_YYYYMMDD
+PSC_RUN_ROOT=~/Vibe/PSC_M6_ACCEPTANCE_YYYYMMDD
 python3 scripts/desktop_acceptance.py prepare "$PSC_RUN_ROOT"
 PSC_PROJECT="$PSC_RUN_ROOT/project"
 PSC_INPUTS="$PSC_RUN_ROOT/inputs"
@@ -33,15 +33,18 @@ Record before proceeding:
 
 ## 2. Install the Milestone 6 candidate
 
-Install the candidate's complete dedicated instruction file inside the disposable project.
-Append only its compact marked loader to the existing root `AGENTS.md`; preserve all
-pre-existing content, including both acceptance sentinels.
-
-Set the final project-relative path here and use it throughout the run:
+From the PromptSourceCode checkout, install the candidate's canonical dedicated file,
+project-local validator, and compact loader. The installer preserves all existing root
+content, including both acceptance sentinels, and leaves nested instructions untouched:
 
 ```sh
-PSC_INSTRUCTIONS_RELATIVE=replace/with/final/candidate/path.md
+PSC_INSTRUCTIONS_RELATIVE=.prompt-source/instructions-v1.md
+python3 scripts/instruction_contract.py install "$PSC_PROJECT"
+python3 scripts/instruction_contract.py check "$PSC_PROJECT"
 ```
+
+The project-relative path `.prompt-source/instructions-v1.md` is frozen for instruction
+version 1. Do not substitute a fallback or global path.
 
 The loader must use these exact markers so the validator can measure only its block:
 
@@ -63,7 +66,7 @@ Commit and push the candidate installation before capture begins:
 
 ```sh
 cd "$PSC_PROJECT"
-git add AGENTS.md "$PSC_INSTRUCTIONS_RELATIVE"
+git add AGENTS.md "$PSC_INSTRUCTIONS_RELATIVE" .prompt-source/validate.py
 git commit -m "test: install milestone 6 capture candidate"
 git push origin main
 ```
@@ -71,6 +74,470 @@ git push origin main
 Confirm that the project has no `.codex/` directory, PromptSourceCode skill, plugin,
 background service, or network dependency. Open `$PSC_PROJECT` directly in Codex Desktop
 and create a new task manually.
+
+## Operator checklist — follow these steps exactly
+
+The workspace and candidate installation for this run are already prepared. Open Terminal
+and run this once so every command below works even in a new shell:
+
+```sh
+export PSC_RUN_ROOT=~/Vibe/PSC_M6_ACCEPTANCE_20260917
+export PSC_PROJECT="$PSC_RUN_ROOT/project"
+export PSC_INPUTS="$PSC_RUN_ROOT/inputs"
+export PSC_REPO=~/Vibe/PromptSourceCode
+```
+
+For every `pbcopy` command below: run the command, click the Codex Desktop message box,
+press Command-V, and submit once. Do not edit the pasted text. Unless a step explicitly
+says to steer or press Stop, wait for Codex to finish before continuing.
+
+### Standard capture: S01 through S13
+
+#### S01 — start the root task
+
+1. In Codex Desktop, open `$PSC_PROJECT` as the project.
+2. Create a brand-new task manually.
+3. In Terminal run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/S01.txt"
+   ```
+
+4. Paste and submit in Desktop.
+5. Wait for completion. Do not edit `AGENTS.md` or anything under `.prompt-source/`.
+6. Continue to S02 in the same task.
+
+#### S02 — normal follow-up
+
+1. Run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/S02.txt"
+   ```
+
+2. Paste and submit in the same task.
+3. Wait for completion.
+
+#### S03, S04, S04B, S05 — one active turn with three steering messages
+
+1. Copy and submit S03:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/S03.txt"
+   ```
+
+2. Do **not** wait for S03 to finish. As soon as its 30-second sleep is running, copy and
+   submit S04:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/S04.txt"
+   ```
+
+3. While the same turn is still active, copy and submit S04B:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/S04B.txt"
+   ```
+
+4. While it is still active, copy and submit S05:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/S05.txt"
+   ```
+
+5. Now wait for the whole turn to finish. Do not start a new task between these four
+   submissions.
+
+#### S06 — attach four files in one message
+
+1. In the same Desktop task, click the attachment button.
+2. Attach all four files before submitting:
+
+   ```text
+   ~/Vibe/PSC_M6_ACCEPTANCE_20260917/inputs/artifacts/notes.txt
+   ~/Vibe/PSC_M6_ACCEPTANCE_20260917/inputs/artifacts/binary.dat
+   ~/Vibe/PSC_M6_ACCEPTANCE_20260917/inputs/artifacts/collision-a/Résumé Final ??.PNG
+   ~/Vibe/PSC_M6_ACCEPTANCE_20260917/inputs/artifacts/collision-b/Résumé Final ??.PNG
+   ```
+
+3. Confirm four attachment chips are visible.
+4. Run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/S06.txt"
+   ```
+
+5. Paste the prompt into that same message and submit once.
+6. Wait for completion.
+
+#### S07 — repository-local artifact
+
+1. Run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/S07.txt"
+   ```
+
+2. Paste, submit, and wait for completion. Do not attach the repository file manually.
+
+#### S08 — paste an image, not a file attachment
+
+1. Open the source image in Preview:
+
+   ```sh
+   open -a Preview "$PSC_INPUTS/artifacts/paste-source.png"
+   ```
+
+2. In Preview, press Command-A and then Command-C to copy the image itself.
+3. Return to the same Codex Desktop message box and press Command-V. Confirm an image
+   preview appears; do not use the attachment button.
+4. In Terminal run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/S08.txt"
+   ```
+
+5. Paste the text beside the already pasted image and submit once.
+6. Wait for completion.
+
+#### S09 — unavailable artifact
+
+1. Run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/S09.txt"
+   ```
+
+2. Paste, submit, and wait. Do not create or attach the missing file.
+
+#### S10 — standard-capture Stop
+
+1. Run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/S10.txt"
+   ```
+
+2. Paste and submit.
+3. Wait until Codex has started the requested 120-second sleep. Do not wait for completion.
+4. Press the Desktop **Stop** button before 120 seconds elapse.
+5. Wait until the task is visibly stopped. Do not resend S10.
+
+#### S11 — recover the unfinished standard entry
+
+1. In the same stopped task, run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/S11.txt"
+   ```
+
+2. Paste, submit, and wait for completion.
+
+#### S12 — disable capture for exactly one interaction
+
+1. In Terminal disable the loader control:
+
+   ```sh
+   perl -0pi -e 's/- Capture: enabled/- Capture: disabled/' "$PSC_PROJECT/AGENTS.md"
+   ```
+
+2. Confirm exactly one disabled control exists:
+
+   ```sh
+   grep -n -- '- Capture:' "$PSC_PROJECT/AGENTS.md"
+   ```
+
+   Expected output ends with `- Capture: disabled`.
+3. Run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/S12.txt"
+   ```
+
+4. Paste, submit, and wait for completion. The ordinary file should be created even though
+   capture is disabled.
+
+#### S13 — re-enable capture
+
+1. Re-enable the loader:
+
+   ```sh
+   perl -0pi -e 's/- Capture: disabled/- Capture: enabled/' "$PSC_PROJECT/AGENTS.md"
+   ```
+
+2. Confirm the control is enabled:
+
+   ```sh
+   grep -n -- '- Capture:' "$PSC_PROJECT/AGENTS.md"
+   ```
+
+3. Run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/S13.txt"
+   ```
+
+4. Paste, submit, and wait for completion.
+
+### Nested instructions: S14
+
+#### S14 — open the nested directory as its own Desktop project
+
+1. Wait until S13 has finished. Leave the existing root task unchanged in the sidebar;
+   there is no need to close or archive it.
+2. In Codex Desktop, add/open a **separate project** whose folder is:
+
+   ```text
+   ~/Vibe/PSC_M6_ACCEPTANCE_20260917/project/packages/demo
+   ```
+
+   Do not change the working folder of the existing root task.
+3. Select that new nested project and create a brand-new task in it.
+4. Run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/S14.txt"
+   ```
+
+5. Paste, submit, and wait for completion.
+6. Leave the nested task unchanged in the sidebar.
+7. Select the original root project (`$PSC_PROJECT`) before continuing. The next step will
+   create a new task in that original root project.
+
+### Stop after standard capture when optional hooks are declined
+
+If the operator does not consent to optional-hook testing, stop after S14:
+
+1. Do not create `.codex/`, install hook files, open CLI `/hooks`, or change hook trust.
+2. Leave both Desktop tasks and the disposable workspace unchanged.
+3. Tell the PromptSourceCode development task that S01 through S14 are complete and hooks
+   were declined.
+4. The development task runs the standard-only validator documented in section 7. It
+   records S15 and H01 through H11 as `Not run`; it does not turn this partial result into
+   full Milestone 6 acceptance.
+
+### Install inert optional hooks: S15
+
+#### Install but do not trust the hooks
+
+1. Wait for the current task to finish and leave it unchanged in the sidebar.
+2. In Terminal run:
+
+   ```sh
+   cd "$PSC_PROJECT"
+   mkdir -p .codex/hooks
+   cp "$PSC_REPO/hooks/prompt_source_core.py" .codex/hooks/
+   cp "$PSC_REPO/hooks/prompt_source_hook.py" .codex/hooks/
+   cp "$PSC_REPO/hooks/hooks.json.example" .codex/hooks.json
+   ```
+
+3. Do not open CLI `/hooks` yet.
+4. Open `$PSC_PROJECT` in Codex Desktop and create a brand-new task manually.
+
+#### S15 — prove copied hooks are inert before trust
+
+1. Run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/S15.txt"
+   ```
+
+2. Paste, submit, and wait for completion.
+3. Leave this task unchanged in the sidebar before enabling hooks.
+
+### Trust and activate the optional hooks
+
+1. Fully quit Codex Desktop with Command-Q.
+2. In Terminal run:
+
+   ```sh
+   cd "$PSC_PROJECT"
+   codex
+   ```
+
+3. At the Codex CLI prompt enter `/hooks`.
+4. Select `UserPromptSubmit`, review its exact command, then enable and trust it.
+5. Return to `/hooks`, select `Interrupt`, review it separately, then enable and trust it.
+6. Confirm both definitions show enabled and trusted. Never use a trust-bypass option.
+7. Exit Codex CLI.
+8. Launch Codex Desktop again, open `$PSC_PROJECT`, and create a brand-new task manually.
+
+### Hook-assisted capture: H01 through H10
+
+#### H01 — first trusted hook prompt
+
+1. Run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/H01.txt"
+   ```
+
+2. Paste, submit, and wait for completion.
+
+#### H02 — hook-assisted follow-up
+
+1. Run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/H02.txt"
+   ```
+
+2. Paste, submit, and wait for completion.
+
+#### H03A and H03B — two identical submissions
+
+1. Run, paste, submit, and wait for H03A to finish:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/H03A.txt"
+   ```
+
+2. Only after H03A finishes, run, paste, submit, and wait for H03B:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/H03B.txt"
+   ```
+
+3. Do not change either identical prompt.
+
+#### H04, H05, H06, H07 — one hook-assisted turn with steering
+
+1. Copy and submit H04:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/H04.txt"
+   ```
+
+2. Do **not** wait for H04 to finish. Once its 30-second sleep is running, copy and submit
+   H05:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/H05.txt"
+   ```
+
+3. While the same turn remains active, copy and submit H06:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/H06.txt"
+   ```
+
+4. While it is still active, copy and submit H07:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/H07.txt"
+   ```
+
+5. Wait for the full turn to finish. Do not start a new task between H04 and H07.
+
+#### H08 — one attachment plus one pasted image
+
+1. In the same message, attach this file with the attachment button:
+
+   ```text
+   ~/Vibe/PSC_M6_ACCEPTANCE_20260917/inputs/artifacts/notes.txt
+   ```
+
+2. Open the paste source in Preview:
+
+   ```sh
+   open -a Preview "$PSC_INPUTS/artifacts/paste-source.png"
+   ```
+
+3. In Preview press Command-A, Command-C. Return to Desktop and press Command-V so an
+   image preview appears beside the attached file.
+4. Run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/H08.txt"
+   ```
+
+5. Paste the text into that same message, confirm both the file and pasted image are
+   present, submit once, and wait for completion.
+
+#### H09 — trusted hook interruption
+
+1. Run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/H09.txt"
+   ```
+
+2. Paste and submit.
+3. Wait until Codex has claimed the prompt and begun the 120-second sleep.
+4. Press Desktop **Stop** before the sleep finishes.
+5. Wait until the task is visibly stopped. Do not resend H09.
+
+#### H10 — deliberately unavailable handler with standard fallback
+
+1. In Terminal temporarily move the handler away without editing the trusted definition:
+
+   ```sh
+   cd "$PSC_PROJECT"
+   mv .codex/hooks/prompt_source_hook.py .codex/hooks/prompt_source_hook.py.disabled
+   ```
+
+2. Run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/H10.txt"
+   ```
+
+3. Paste and submit. A visible hook error is expected; the message must still reach Codex.
+4. Wait for the standard fallback to finish.
+5. Immediately restore the handler:
+
+   ```sh
+   mv .codex/hooks/prompt_source_hook.py.disabled .codex/hooks/prompt_source_hook.py
+   ```
+
+### Disable optional hooks and run H11
+
+#### Disable both definitions
+
+1. Fully quit Codex Desktop with Command-Q.
+2. In Terminal run:
+
+   ```sh
+   cd "$PSC_PROJECT"
+   codex
+   ```
+
+3. Enter `/hooks`.
+4. Select `UserPromptSubmit` and disable it.
+5. Return to `/hooks`, select `Interrupt`, and disable it separately.
+6. Confirm both definitions are disabled, then exit Codex CLI.
+7. Launch Desktop again, open `$PSC_PROJECT`, and create a brand-new task manually.
+
+#### H11 — standard capture after hook disable
+
+1. Run:
+
+   ```sh
+   pbcopy < "$PSC_INPUTS/prompts/H11.txt"
+   ```
+
+2. Paste, submit, and wait for completion.
+
+### Final Git checkpoint — do this after H11
+
+1. In Terminal run exactly:
+
+   ```sh
+   cd "$PSC_PROJECT"
+   git add ordinary-git-check.txt
+   git commit -m "test: verify ordinary project Git behavior"
+   git push origin main
+   git status --short --branch
+   git rev-list --left-right --count origin/main...main
+   ```
+
+2. Confirm the divergence command prints `0  0` (two zeroes separated by whitespace).
+3. Do not add or commit `.codex/`, `PROMPT_SOURCE.md`, or `prompt_source_assets/`.
+4. Stop here and tell the PromptSourceCode development task that the Desktop sequence is
+   complete. The development task will run the validator and all remaining checks.
+
+The sections below preserve the prompts, expected evidence, and maintainer rationale. You
+do not need to interpret them while operating the checklist above.
 
 ## 3. How to submit exact prompts
 
@@ -243,16 +710,16 @@ PSC acceptance S13. Create `reenabled-check.txt` containing exactly `REENABLED` 
 
 ### S14 — nested existing instructions
 
-Open `$PSC_PROJECT/packages/demo` directly as a Codex Desktop project and create a new task
-manually. Submit S14:
+Add/open `$PSC_PROJECT/packages/demo` as a separate Codex Desktop project, leave the
+existing root task unchanged, and create a new task in the nested project. Submit S14:
 
 ```text
 PSC acceptance S14. Exercise the nested instructions with token PSC_NESTED_SENTINEL. Make no other project changes.
 ```
 
 Confirm the nested sentinel file is created with exact bytes while PromptSourceCode still
-writes the single history at the Git root. Close this task and reopen the repository-root
-project before continuing.
+writes the single history at the Git root. Leave the nested task unchanged, then select
+the original repository-root project before continuing.
 
 ## 5. Optional-hook lifecycle
 
@@ -430,11 +897,25 @@ From the PromptSourceCode checkout, run:
 python3 scripts/desktop_acceptance.py validate \
   "$PSC_PROJECT" \
   "$PSC_INPUTS/manifest.json" \
-  --instructions-relative "$PSC_INSTRUCTIONS_RELATIVE"
+  --instructions-relative .prompt-source/instructions-v1.md
 ```
 
-The validator checks the exact prepared prompt sequence, expected capture methods and
-terminal states, correction association, generated ordinary files, artifact bytes and
+When the operator stops after S14 and declines all optional-hook testing, run instead:
+
+```sh
+python3 scripts/desktop_acceptance.py validate \
+  "$PSC_PROJECT" \
+  "$PSC_INPUTS/manifest.json" \
+  --instructions-relative .prompt-source/instructions-v1.md \
+  --standard-only
+```
+
+Successful standard-only output explicitly reports
+`Optional-hook cases S15 and H01-H11: NOT RUN` and that full Milestone 6 Desktop
+acceptance remains incomplete. Do not install hooks merely to satisfy this validator mode.
+
+The validator checks the prepared case sequence, case identity, expected capture methods
+and terminal states, correction association, generated ordinary files, artifact bytes and
 metadata, collision behavior, pasted-image fidelity, unavailable-artifact boundaries,
 instruction budgets, loader markers, existing-instruction preservation, schema and entry
 structure, storage topology, forbidden runtime outputs, Git isolation, and synchronization

@@ -19,16 +19,44 @@ HOOKS_DIRECTORY = REPOSITORY_ROOT / "hooks"
 sys.path.insert(0, str(HOOKS_DIRECTORY))
 
 import prompt_source_core as core
+import instruction_contract as instruction_contract
 
 
-LOADER_BEGIN = "<!-- prompt-source-loader-begin -->"
-LOADER_END = "<!-- prompt-source-loader-end -->"
+LOADER_BEGIN = instruction_contract.LOADER_BEGIN
+LOADER_END = instruction_contract.LOADER_END
+CANONICAL_INSTRUCTIONS = instruction_contract.CANONICAL_INSTRUCTIONS.as_posix()
+CANONICAL_VALIDATOR = instruction_contract.CANONICAL_VALIDATOR.as_posix()
 ROOT_SENTINEL = "PSC_ROOT_SENTINEL"
 NESTED_SENTINEL = "PSC_NESTED_SENTINEL"
 PASTED_FIDELITY = (
     "- Fidelity: Byte-for-byte copy of the clipboard image materialized by Codex "
     "Desktop; binary identity with any pre-clipboard source is not claimed."
 )
+STANDARD_CASE_IDS = {
+    "S01",
+    "S02",
+    "S03",
+    "S04",
+    "S04B",
+    "S05",
+    "S06",
+    "S07",
+    "S08",
+    "S09",
+    "S10",
+    "S11",
+    "S13",
+    "S14",
+}
+STANDARD_EXPECTED_FILES = {
+    "ordinary-project.txt",
+    "root-instructions-observed.txt",
+    "ui-theme.txt",
+    "standard-recovery.txt",
+    "disabled-check.txt",
+    "reenabled-check.txt",
+    "packages/demo/nested-instructions-observed.txt",
+}
 
 
 def _run_git(directory: Path, *arguments: str) -> str:
@@ -45,6 +73,16 @@ def _run_git(directory: Path, *arguments: str) -> str:
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _display_path(path: Path) -> str:
+    """Prefer a portable home-relative path in prompts, manifests, and output."""
+    resolved = path.resolve()
+    try:
+        relative = resolved.relative_to(Path.home().resolve())
+    except ValueError:
+        return str(resolved)
+    return f"~/{relative.as_posix()}"
 
 
 def _measure(payload: bytes) -> dict[str, int]:
@@ -88,7 +126,7 @@ def _case(
     }
 
 
-def _acceptance_cases(missing_artifact: Path) -> list[dict[str, Any]]:
+def _acceptance_cases(missing_artifact: str | Path) -> list[dict[str, Any]]:
     complex_prompt = (
         "PSC acceptance S01. Exercise the existing root instructions with token "
         f"{ROOT_SENTINEL}.\n"
@@ -380,7 +418,7 @@ def prepare(workspace: Path) -> None:
     )
 
     missing_artifact = artifacts / "intentionally-missing.bin"
-    cases = _acceptance_cases(missing_artifact)
+    cases = _acceptance_cases(_display_path(missing_artifact))
     for case in cases:
         _write_bytes(
             prompts / f"{case['id']}.txt",
@@ -390,8 +428,8 @@ def prepare(workspace: Path) -> None:
     source_files = [path for path in artifacts.rglob("*") if path.is_file()]
     manifest = {
         "schema": 1,
-        "project": str(project),
-        "inputs": str(inputs),
+        "project": _display_path(project),
+        "inputs": _display_path(inputs),
         "preexisting_files": {
             "AGENTS.md": {
                 **_measure(root_agents.encode("utf-8")),
@@ -446,12 +484,12 @@ def prepare(workspace: Path) -> None:
     _run_git(project, "commit", "-m", "test: prepare existing project instructions")
     origin = workspace / "origin.git"
     _run_git(workspace, "init", "--bare", str(origin))
-    _run_git(project, "remote", "add", "origin", str(origin))
+    _run_git(project, "remote", "add", "origin", "../origin.git")
     _run_git(project, "push", "-u", "origin", "main")
 
-    print(f"Prepared fresh acceptance workspace: {workspace}")
-    print(f"Codex Desktop project: {project}")
-    print(f"Prompt and artifact inputs: {inputs}")
+    print(f"Prepared fresh acceptance workspace: {_display_path(workspace)}")
+    print(f"Codex Desktop project: {_display_path(project)}")
+    print(f"Prompt and artifact inputs: {_display_path(inputs)}")
     print("The target did not previously exist and no earlier evidence was reused.")
 
 
@@ -460,13 +498,7 @@ def _word_count(text: str) -> int:
 
 
 def _extract_loader(text: str) -> str:
-    if text.count(LOADER_BEGIN) != 1 or text.count(LOADER_END) != 1:
-        raise ValueError("root AGENTS.md must contain exactly one canonical loader block")
-    start = text.index(LOADER_BEGIN)
-    end = text.index(LOADER_END, start) + len(LOADER_END)
-    if end <= start:
-        raise ValueError("loader markers are out of order")
-    return text[start:end]
+    return instruction_contract.extract_loader(text)
 
 
 def _tracked_files(project: Path) -> set[str]:
@@ -479,21 +511,14 @@ def validate(
     manifest_path: Path,
     instructions_relative: str,
     *,
-    max_loader_bytes: int,
-    max_loader_words: int,
-    max_instructions_bytes: int,
-    max_instructions_words: int,
-    max_combined_bytes: int,
-    max_combined_words: int,
+    standard_only: bool = False,
 ) -> None:
     project = project.resolve()
     instruction_path = Path(instructions_relative)
-    if (
-        instruction_path.is_absolute()
-        or ".." in instruction_path.parts
-        or instructions_relative in {"", ".", "AGENTS.md"}
-    ):
-        raise SystemExit("--instructions-relative must name a dedicated file inside the project")
+    if instruction_path.as_posix() != CANONICAL_INSTRUCTIONS:
+        raise SystemExit(
+            f"--instructions-relative must be the canonical path {CANONICAL_INSTRUCTIONS}"
+        )
     instructions_relative = instruction_path.as_posix()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     errors: list[str] = []
@@ -504,7 +529,7 @@ def validate(
 
     check(manifest.get("schema") == 1, "acceptance manifest schema is not 1")
     check(
-        Path(manifest.get("project", "")).resolve() == project,
+        Path(manifest.get("project", "")).expanduser().resolve() == project,
         "manifest belongs to a different acceptance project",
     )
 
@@ -516,7 +541,12 @@ def validate(
     except (OSError, UnicodeDecodeError, core.PromptSourceError) as exc:
         raise SystemExit(f"history validation failed: {exc}") from exc
 
-    captured_cases = [case for case in manifest["cases"] if case["captured"]]
+    captured_cases = [
+        case
+        for case in manifest["cases"]
+        if case["captured"]
+        and (not standard_only or case["id"] in STANDARD_CASE_IDS)
+    ]
     check(
         len(entries) == len(captured_cases),
         f"expected {len(captured_cases)} captured entries, found {len(entries)}",
@@ -524,15 +554,16 @@ def validate(
     case_entries: dict[str, core.Entry] = {}
     for case, entry in zip(captured_cases, entries):
         case_entries[case["id"]] = entry
-        prompt_matches = entry.prompt == case["prompt"]
-        if (
-            not prompt_matches
-            and entry.fields["Capture method"] == "Instruction-mediated"
-            and entry.final_newline == "Unknown"
-            and case["prompt"].endswith("\n")
-        ):
-            prompt_matches = entry.prompt == case["prompt"][:-1]
-        check(prompt_matches, f"{case['id']} prompt bytes differ")
+        if entry.fields["Capture method"] == "Instruction-mediated":
+            expected_prompt = case["prompt"]
+            if entry.final_newline == "Unknown" and expected_prompt.endswith("\n"):
+                expected_prompt = expected_prompt[:-1]
+            check(
+                entry.prompt == expected_prompt,
+                f"{case['id']} prompt text differs at the Desktop delivery boundary",
+            )
+        else:
+            check(entry.prompt == case["prompt"], f"{case['id']} prompt bytes differ")
         if case["method"] is not None:
             check(
                 entry.fields["Capture method"] == case["method"],
@@ -560,6 +591,10 @@ def validate(
             check("Session ID" in entry.fields, f"{case['id']} lacks a session ID")
             check("Turn ID" in entry.fields, f"{case['id']} lacks a turn ID")
         elif case["method"] == "Instruction-mediated":
+            check(
+                entry.final_newline == "Unknown",
+                f"{case['id']} guessed final-newline state {entry.final_newline!r}",
+            )
             for hook_field in ("Session ID", "Turn ID", "Agent observation"):
                 check(
                     hook_field not in entry.fields,
@@ -568,8 +603,13 @@ def validate(
     for case in manifest["cases"]:
         if case["captured"]:
             continue
+        if standard_only and case["id"] != "S12":
+            continue
+        case_token = re.compile(
+            rf"\bPSC acceptance {re.escape(case['id'])}(?:\.|\s)"
+        )
         check(
-            all(entry.prompt != case["prompt"] for entry in entries),
+            all(not case_token.search(entry.prompt) for entry in entries),
             f"disabled case {case['id']} was unexpectedly captured",
         )
     for case in captured_cases:
@@ -641,7 +681,14 @@ def validate(
             "H08 does not keep Desktop context separate",
         )
 
-    for relative, expected in manifest["expected_files"].items():
+    expected_files = manifest["expected_files"].items()
+    if standard_only:
+        expected_files = (
+            (relative, expected)
+            for relative, expected in expected_files
+            if relative in STANDARD_EXPECTED_FILES
+        )
+    for relative, expected in expected_files:
         path = project / relative
         check(path.is_file(), f"missing expected ordinary file: {relative}")
         if path.is_file():
@@ -649,10 +696,17 @@ def validate(
                 path.read_bytes() == expected.encode("utf-8"),
                 f"ordinary file has unexpected bytes: {relative}",
             )
-    for relative in manifest["expected_absent_files"]:
+    absent_files = manifest["expected_absent_files"]
+    if standard_only:
+        absent_files = ["standard-stop-should-not-exist.txt"]
+    for relative in absent_files:
         check(not (project / relative).exists(), f"interrupted work created {relative}")
 
     history = history_path.read_text(encoding="utf-8")
+    check(
+        str(Path.home()) not in history,
+        "history exposes the operator home path instead of a portable boundary",
+    )
     references = re.findall(r"\]\(<(prompt_source_assets/[^>]+)>\)", history)
     assets_directory = project / "prompt_source_assets"
     actual_assets = (
@@ -660,10 +714,8 @@ def validate(
         if assets_directory.is_dir()
         else set()
     )
-    check(
-        len(actual_assets) >= manifest["minimum_preserved_assets"],
-        "too few preserved assets",
-    )
+    minimum_assets = 6 if standard_only else manifest["minimum_preserved_assets"]
+    check(len(actual_assets) >= minimum_assets, "too few preserved assets")
     check(set(references) == actual_assets, "history asset references and files differ")
     check(len(references) == len(set(references)), "an asset is referenced more than once")
     for relative in actual_assets:
@@ -689,6 +741,12 @@ def validate(
     }
     actual_hashes = {_sha256(project / path) for path in actual_assets}
     check(required_hashes <= actual_hashes, "one or more attached source bytes were not preserved")
+    repository_source = project / "fixtures/repository-source.txt"
+    if repository_source.is_file():
+        check(
+            _sha256(repository_source) in actual_hashes,
+            "repository-local source bytes were not preserved",
+        )
     check(any("-002." in path for path in actual_assets), "same-name collision suffix was not used")
     check(PASTED_FIDELITY in history.splitlines(), "canonical pasted-image fidelity line is absent")
 
@@ -702,6 +760,7 @@ def validate(
 
     agents_path = project / "AGENTS.md"
     instructions_path = project / instructions_relative
+    validator_path = project / CANONICAL_VALIDATOR
     agents_text = ""
     try:
         agents_text = agents_path.read_text(encoding="utf-8")
@@ -714,6 +773,18 @@ def validate(
     except (OSError, UnicodeDecodeError) as exc:
         errors.append(f"cannot read dedicated instructions: {exc}")
         instructions = ""
+    if instructions:
+        check(
+            instructions_path.read_bytes()
+            == instruction_contract.INSTRUCTIONS_TEMPLATE.read_bytes(),
+            "dedicated instructions are stale or conflicting",
+        )
+    check(validator_path.is_file(), "project-local standard validator is missing")
+    if validator_path.is_file():
+        check(
+            validator_path.read_bytes() == instruction_contract.VALIDATOR_SOURCE.read_bytes(),
+            "project-local standard validator is stale or conflicting",
+        )
     check(ROOT_SENTINEL in agents_text, "existing root instructions were removed")
     baseline_root = manifest["preexisting_files"]["AGENTS.md"]
     baseline_bytes = agents_text.encode("utf-8")[: baseline_root["bytes"]]
@@ -733,22 +804,18 @@ def validate(
         instructions_relative in loader,
         "loader does not reference the dedicated instruction path",
     )
-    loader_bytes = len(loader.encode("utf-8"))
-    loader_words = _word_count(loader)
-    instruction_bytes = len(instructions.encode("utf-8"))
-    instruction_words = _word_count(instructions)
-    check(loader_bytes <= max_loader_bytes, "loader exceeds its byte budget")
-    check(loader_words <= max_loader_words, "loader exceeds its word budget")
-    check(instruction_bytes <= max_instructions_bytes, "instructions exceed their byte budget")
-    check(instruction_words <= max_instructions_words, "instructions exceed their word budget")
-    check(
-        loader_bytes + instruction_bytes <= max_combined_bytes,
-        "always-read instructions exceed their combined byte budget",
-    )
-    check(
-        loader_words + instruction_words <= max_combined_words,
-        "always-read instructions exceed their combined word budget",
-    )
+    try:
+        loader_size, instruction_size = instruction_contract.validate_pair(
+            loader, instructions
+        )
+    except instruction_contract.InstructionContractError as exc:
+        errors.append(f"instruction contract is invalid: {exc}")
+        loader_size = instruction_contract.measure(loader)
+        instruction_size = instruction_contract.measure(instructions)
+    loader_bytes = loader_size.bytes
+    loader_words = loader_size.words
+    instruction_bytes = instruction_size.bytes
+    instruction_words = instruction_size.words
 
     tracked = _tracked_files(project)
     check(core.HISTORY_NAME not in tracked, "generated history is tracked by Git")
@@ -758,22 +825,29 @@ def validate(
     )
     check("AGENTS.md" in tracked, "installed root instructions were not committed")
     check(instructions_relative in tracked, "dedicated instructions were not committed")
+    check(CANONICAL_VALIDATOR in tracked, "project-local standard validator was not committed")
     check(
         not any(path == ".codex" or path.startswith(".codex/") for path in tracked),
         "optional hook installation files are tracked by Git",
     )
-    copied_hook_assets = {
-        project / ".codex/hooks/prompt_source_core.py": HOOKS_DIRECTORY / "prompt_source_core.py",
-        project / ".codex/hooks/prompt_source_hook.py": HOOKS_DIRECTORY / "prompt_source_hook.py",
-        project / ".codex/hooks.json": HOOKS_DIRECTORY / "hooks.json.example",
-    }
-    for installed, source in copied_hook_assets.items():
-        check(installed.is_file(), f"missing installed optional hook asset: {installed}")
-        if installed.is_file():
-            check(
-                installed.read_bytes() == source.read_bytes(),
-                f"installed optional hook asset differs from source: {installed}",
-            )
+    if standard_only:
+        check(
+            not (project / ".codex").exists(),
+            "optional hook files exist during the standard-only run",
+        )
+    else:
+        copied_hook_assets = {
+            project / ".codex/hooks/prompt_source_core.py": HOOKS_DIRECTORY / "prompt_source_core.py",
+            project / ".codex/hooks/prompt_source_hook.py": HOOKS_DIRECTORY / "prompt_source_hook.py",
+            project / ".codex/hooks.json": HOOKS_DIRECTORY / "hooks.json.example",
+        }
+        for installed, source in copied_hook_assets.items():
+            check(installed.is_file(), f"missing installed optional hook asset: {installed}")
+            if installed.is_file():
+                check(
+                    installed.read_bytes() == source.read_bytes(),
+                    f"installed optional hook asset differs from source: {installed}",
+                )
     try:
         divergence = _run_git(project, "rev-list", "--left-right", "--count", "origin/main...main")
         check(divergence == "0\t0", f"main and origin/main differ: {divergence!r}")
@@ -818,7 +892,10 @@ def validate(
             print(f"- {error}", file=sys.stderr)
         raise SystemExit(1)
 
-    print("Desktop acceptance validation PASSED")
+    if standard_only:
+        print("Desktop standard-capture acceptance validation PASSED")
+    else:
+        print("Desktop acceptance validation PASSED")
     print(f"Entries: {len(entries)}")
     print(f"Assets: {len(actual_assets)}")
     print(f"Loader: {loader_words} words, {loader_bytes} bytes")
@@ -835,6 +912,9 @@ def validate(
         f"{baseline_nested['bytes']} bytes"
     )
     print("Git: generated provenance untracked; main synchronized with origin/main")
+    if standard_only:
+        print("Optional-hook cases S15 and H01-H11: NOT RUN")
+        print("Full Milestone 6 Desktop acceptance remains incomplete")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -846,13 +926,16 @@ def build_parser() -> argparse.ArgumentParser:
     validate_parser = subparsers.add_parser("validate", help="validate the completed run")
     validate_parser.add_argument("project", type=Path)
     validate_parser.add_argument("manifest", type=Path)
-    validate_parser.add_argument("--instructions-relative", required=True)
-    validate_parser.add_argument("--max-loader-bytes", type=int, default=2048)
-    validate_parser.add_argument("--max-loader-words", type=int, default=300)
-    validate_parser.add_argument("--max-instructions-bytes", type=int, default=6144)
-    validate_parser.add_argument("--max-instructions-words", type=int, default=900)
-    validate_parser.add_argument("--max-combined-bytes", type=int, default=8192)
-    validate_parser.add_argument("--max-combined-words", type=int, default=1200)
+    validate_parser.add_argument(
+        "--instructions-relative",
+        default=CANONICAL_INSTRUCTIONS,
+        help=f"canonical project path (fixed at {CANONICAL_INSTRUCTIONS})",
+    )
+    validate_parser.add_argument(
+        "--standard-only",
+        action="store_true",
+        help="validate only S01-S14 and record optional-hook cases as not run",
+    )
     return parser
 
 
@@ -865,12 +948,7 @@ def main(argv: list[str] | None = None) -> int:
         arguments.project,
         arguments.manifest,
         arguments.instructions_relative,
-        max_loader_bytes=arguments.max_loader_bytes,
-        max_loader_words=arguments.max_loader_words,
-        max_instructions_bytes=arguments.max_instructions_bytes,
-        max_instructions_words=arguments.max_instructions_words,
-        max_combined_bytes=arguments.max_combined_bytes,
-        max_combined_words=arguments.max_combined_words,
+        standard_only=arguments.standard_only,
     )
     return 0
 

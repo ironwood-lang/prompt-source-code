@@ -1,4 +1,4 @@
-# PromptSourceCode 0.1.0 Compatibility and Upgrade Policy
+# PromptSourceCode Compatibility and Upgrade Policy
 
 ## Two different compatibility questions
 
@@ -73,11 +73,18 @@ compatibility, not evidence of supported live capture.
 
 ## Upgrade within schema 1
 
-To update standard capture, replace the complete marked block in the project-root
-`AGENTS.md` with the new
-[`AGENTS.prompt-source-standard.md`](../templates/AGENTS.prompt-source-standard.md). Keep
-all unrelated instructions. If capture was disabled, restore that state after replacing
-the block unless re-enabling is intentional.
+The full-inline 0.1.0 installation is a pre-1.0 experiment and is not retained as a second
+capture layout. Replace that complete marked block with the compact loader from
+[`AGENTS.prompt-source-loader.md`](../templates/AGENTS.prompt-source-loader.md), and install
+[`prompt-source-instructions-v1.md`](../templates/prompt-source-instructions-v1.md) at the
+frozen project path `.prompt-source/instructions-v1.md`, with the matching project-local
+validator at `.prompt-source/validate.py`. The documented
+`scripts/instruction_contract.py update` operation preserves all root content outside the
+loader, every nested `AGENTS.md`, and existing schema-1 provenance.
+
+If capture was disabled, restore that state after the update unless re-enabling is
+intentional. The layout uses no user-specific global Codex configuration, fallback
+filename, skill, plugin, hook, service, or network dependency.
 
 Do not rewrite, renumber, normalize, or recreate existing schema-1 entries. Preserve
 `PROMPT_SOURCE.md` and all verified files in `prompt_source_assets/`. New captures append

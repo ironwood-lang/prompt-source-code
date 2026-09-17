@@ -41,7 +41,7 @@ all tested interaction types.
 Delivered in:
 
 - [`PROMPT_SOURCE_FORMAT.md`](PROMPT_SOURCE_FORMAT.md)
-- [`../templates/AGENTS.prompt-source-standard.md`](../templates/AGENTS.prompt-source-standard.md)
+- the then-current full-inline standard template, superseded by Milestone 6
 - [`../tests/fixtures/expected-history.md`](../tests/fixtures/expected-history.md)
 - [`../tests/test_format.py`](../tests/test_format.py)
 - [`MANUAL_CODEX_DESKTOP_VALIDATION.md`](MANUAL_CODEX_DESKTOP_VALIDATION.md)
@@ -175,7 +175,7 @@ deterministic tests and 80 repeated concurrency/failure-injection invocations.
 
 ## Milestone 6: Dedicated Capture Instruction File
 
-**Status:** Planned
+**Status:** In progress
 
 - Treat the 0.1.0 instruction footprint as a release-blocking usability and compatibility
   concern for this milestone. The baseline template is 358 lines, 2,591 words, and 18,250
@@ -191,8 +191,9 @@ deterministic tests and 80 repeated concurrency/failure-injection invocations.
 - Define and enforce documented byte and word budgets for both the loader and the complete
   always-read instruction set. The budgets must leave meaningful room for a project's own
   root and nested guidance under Codex's default project-instruction limit.
-- Choose and freeze the dedicated file's canonical project-relative path and define how
-  the loader coexists with a project's existing `AGENTS.md` instructions.
+- Freeze the dedicated file's canonical project-relative path as
+  `.prompt-source/instructions-v1.md` and define how the loader coexists with a project's
+  existing `AGENTS.md` instructions.
 - Preserve the standard path's existing independence from user-specific fallback
   filenames, global Codex configuration, skills, plugins, hooks, background services,
   and network access while reducing its instruction footprint.

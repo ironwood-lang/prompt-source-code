@@ -36,6 +36,8 @@ class DesktopAcceptanceToolTests(unittest.TestCase):
             self.assertFalse(
                 (inputs / "artifacts/intentionally-missing.bin").exists()
             )
+            self.assertNotIn(str(Path.home()), json.dumps(manifest))
+            self.assertNotIn(str(Path.home()), cases["S09"]["prompt"])
             self.assertGreater((project / "AGENTS.md").stat().st_size, 10_000)
             self.assertEqual(manifest["minimum_preserved_assets"], 8)
             self.assertGreater(
@@ -64,6 +66,10 @@ class DesktopAcceptanceToolTests(unittest.TestCase):
                 ),
                 "0\t0",
             )
+            self.assertEqual(
+                acceptance._run_git(project, "remote", "get-url", "origin"),
+                "../origin.git",
+            )
 
     def test_prepare_refuses_to_reuse_a_path(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -88,19 +94,55 @@ class DesktopAcceptanceToolTests(unittest.TestCase):
         self.assertTrue(loader.endswith(acceptance.LOADER_END))
         self.assertEqual(acceptance._word_count(loader), 11)
 
-    def test_validator_refuses_an_instruction_path_outside_the_project(self):
+    def test_validator_requires_the_frozen_instruction_path(self):
         with self.assertRaises(SystemExit):
             acceptance.validate(
                 Path("/tmp/project"),
                 Path("/tmp/manifest.json"),
                 "../outside.md",
-                max_loader_bytes=2048,
-                max_loader_words=300,
-                max_instructions_bytes=6144,
-                max_instructions_words=900,
-                max_combined_bytes=8192,
-                max_combined_words=1200,
             )
+        self.assertEqual(
+            acceptance.CANONICAL_INSTRUCTIONS,
+            ".prompt-source/instructions-v1.md",
+        )
+        self.assertEqual(
+            acceptance.CANONICAL_VALIDATOR,
+            ".prompt-source/validate.py",
+        )
+
+    def test_standard_only_mode_has_the_frozen_case_and_file_scope(self):
+        arguments = acceptance.build_parser().parse_args(
+            [
+                "validate",
+                "/tmp/project",
+                "/tmp/manifest.json",
+                "--standard-only",
+            ]
+        )
+        self.assertTrue(arguments.standard_only)
+        self.assertEqual(
+            acceptance.STANDARD_CASE_IDS,
+            {
+                "S01",
+                "S02",
+                "S03",
+                "S04",
+                "S04B",
+                "S05",
+                "S06",
+                "S07",
+                "S08",
+                "S09",
+                "S10",
+                "S11",
+                "S13",
+                "S14",
+            },
+        )
+        self.assertNotIn("S12", acceptance.STANDARD_CASE_IDS)
+        self.assertNotIn("S15", acceptance.STANDARD_CASE_IDS)
+        self.assertNotIn("H01", acceptance.STANDARD_CASE_IDS)
+        self.assertIn("disabled-check.txt", acceptance.STANDARD_EXPECTED_FILES)
 
     def test_runbook_covers_every_prepared_case_and_validation_gate(self):
         runbook = RUNBOOK.read_text(encoding="utf-8")
@@ -124,8 +166,13 @@ class DesktopAcceptanceToolTests(unittest.TestCase):
         for phrase in (
             "desktop_acceptance.py prepare",
             "desktop_acceptance.py validate",
+            "--standard-only",
+            "Optional-hook cases S15 and H01-H11",
             acceptance.LOADER_BEGIN,
             acceptance.LOADER_END,
+            "PSC_INSTRUCTIONS_RELATIVE=.prompt-source/instructions-v1.md",
+            "instruction_contract.py install",
+            "instruction_contract.py check",
             "at most 300 words and 2,048 UTF-8 bytes",
             "at most 900 words and 6,144 UTF-8 bytes",
             "at most 1,200 words and 8,192 UTF-8 bytes",

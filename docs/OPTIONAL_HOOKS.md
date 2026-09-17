@@ -1,27 +1,27 @@
 # Optional Hook-Assisted Capture
 
-PromptSourceCode's standard `AGENTS.md` instructions remain the complete default. The
-assets in [`../hooks/`](../hooks/) are inert examples until a project owner deliberately
-copies the two Python files and installs, reviews, enables, and trusts the hook definition.
+PromptSourceCode's root loader, dedicated project instructions, and project-local validator
+remain the complete default. The optional assets in [`../hooks/`](../hooks/) are inert until
+a project owner deliberately copies the two hook Python files and installs, reviews,
+enables, and trusts the hook definition.
 The optional path targets Codex Desktop on macOS and uses only `UserPromptSubmit` and
 `Interrupt`.
 
 The hooks are local standard-library Python. They make no network requests and run no Git
 commands. They write only the canonical root `PROMPT_SOURCE.md`; artifact copies remain
-agent work under the standard instructions. Temporary atomic-write files exist only while
+agent work under the dedicated instructions. Temporary atomic-write files exist only while
 a replacement is active. Serialization locks the existing project directory itself, so
 there is no persistent lock, event log, status file, or diagnostic file.
 
 The reviewed copyable files and their exact byte counts and SHA-256 digests are frozen in
-[`../tests/fixtures/release-manifest.json`](../tests/fixtures/release-manifest.json).
+[`../tests/fixtures/distribution-manifest.json`](../tests/fixtures/distribution-manifest.json).
 Copying them into `.codex/` does not enable either definition and does not grant trust.
 
 ## Install explicitly
 
-First install the final standard block from
-[`../templates/AGENTS.prompt-source-standard.md`](../templates/AGENTS.prompt-source-standard.md)
-in the captured project's root `AGENTS.md`. Then, from a trusted local copy of this
-PromptSourceCode repository, review these exact files:
+First complete the standard installation in [`INSTALLATION.md`](INSTALLATION.md), including
+the root loader, `.prompt-source/instructions-v1.md`, and `.prompt-source/validate.py`.
+Then, from a trusted local PromptSourceCode checkout, review these exact optional files:
 
 - `hooks/prompt_source_core.py`
 - `hooks/prompt_source_hook.py`
@@ -173,7 +173,7 @@ make an unchanged earlier entry appear stale during agent enrichment.
 Hook validation and I/O failures produce a concise stderr diagnostic and no persistent
 diagnostic log. The trusted definition's local guard converts a handler failure to host
 success without emitting matching context, so a failed `UserPromptSubmit` hook does not
-block the message or replace the standard instructions. When no valid hook matching
+block the message or replace standard capture. When no valid hook matching
 context accompanies the user interaction—because hooks are absent, unavailable,
 disabled, untrusted, or failed—the agent follows the ordinary
 `Instruction-mediated` path and records the interaction before task work. Direct agent
@@ -195,8 +195,8 @@ structural conflicts, and failed atomic replacement without requiring live hooks
 
 To disable the enhancement, use `/hooks` to disable both reviewed definitions (or remove
 only these two groups from the project's `.codex/hooks.json`), then restart Desktop.
-Leave the standard root `AGENTS.md` block enabled. Existing history and assets remain
-unchanged, and new interactions use standard capture.
+Leave the standard loader, dedicated file, and validator installed. Existing history and
+assets remain unchanged, and new interactions use standard capture.
 
 To update, disable both definitions, replace the two Python files and the two reviewed
 configuration groups from a trusted PromptSourceCode version, review and trust the new
@@ -212,4 +212,4 @@ PromptSourceCode `UserPromptSubmit` and `Interrupt` groups from `.codex/hooks.js
 delete `.codex/hooks/prompt_source_hook.py` and
 `.codex/hooks/prompt_source_core.py`. Do not delete unrelated hook definitions. Removal
 does not delete `PROMPT_SOURCE.md` or `prompt_source_assets/`; standard capture continues
-until its separately marked `AGENTS.md` block is disabled or removed.
+until its separately marked loader is disabled or removed.

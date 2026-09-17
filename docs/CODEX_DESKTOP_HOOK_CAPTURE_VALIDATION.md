@@ -17,10 +17,10 @@ preserve only the identity relationships needed for the evidence.
 - Codex Desktop: 26.911.61220 (9647)
 - macOS: 26.6.2 (25G83)
 - System Python used by the hooks: 3.9.6
-- Disposable project: `/Users/soliveira/Vibe/PSC_Test`
+- Disposable project: `~/Vibe/PSC_Test`
 - Disposable project's initial commit: `7f6dabad39b8a462b8474418b49d958495dfc600`
 - Disposable local bare origin:
-  `/Users/soliveira/Vibe/PSC_M3_filtered_origin_20260917.git`
+  `~/Vibe/PSC_M3_filtered_origin_20260917.git`
 - Capture environment: Codex Desktop for every prompt; Codex CLI only for `/hooks`
   review, enablement, and trust.
 
@@ -36,9 +36,9 @@ skill was used by the final run.
 
 Earlier projects were not destroyed or silently reused:
 
-- `/Users/soliveira/Vibe/PSC_Test_M2_append_fix_20260916`
-- `/Users/soliveira/Vibe/PSC_Test_M3_activation_attempt_20260917`
-- `/Users/soliveira/Vibe/PSC_Test_M3_synthetic_prompt_defect_20260917`
+- `~/Vibe/PSC_Test_M2_append_fix_20260916`
+- `~/Vibe/PSC_Test_M3_activation_attempt_20260917`
+- `~/Vibe/PSC_Test_M3_synthetic_prompt_defect_20260917`
 
 The last project preserves the first live-hook defect exactly as observed. Its history
 SHA-256 is

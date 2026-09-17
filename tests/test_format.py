@@ -11,7 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "tests" / "fixtures" / "expected-history.md"
 ARTIFACTS = ROOT / "tests" / "fixtures" / "artifacts.json"
 SPEC = ROOT / "docs" / "PROMPT_SOURCE_FORMAT.md"
-TEMPLATE = ROOT / "templates" / "AGENTS.prompt-source-standard.md"
+LOADER = ROOT / "templates" / "AGENTS.prompt-source-loader.md"
+INSTRUCTIONS = ROOT / "templates" / "prompt-source-instructions-v1.md"
 README = ROOT / "README.md"
 TECHNICAL = ROOT / "docs" / "TECHNICAL_REFERENCE.md"
 MANUAL = ROOT / "docs" / "MANUAL_CODEX_DESKTOP_VALIDATION.md"
@@ -21,6 +22,7 @@ INSTALLATION = ROOT / "docs" / "INSTALLATION.md"
 COMPATIBILITY = ROOT / "docs" / "COMPATIBILITY.md"
 READINESS = ROOT / "docs" / "CODEX_DESKTOP_V1_RELEASE_READINESS.md"
 RELEASE_MANIFEST = ROOT / "tests" / "fixtures" / "release-manifest.json"
+DISTRIBUTION_MANIFEST = ROOT / "tests" / "fixtures" / "distribution-manifest.json"
 
 SCHEMA_MARKER = "<!-- prompt-source-schema: 1 -->"
 HEADER = """<!-- prompt-source-schema: 1 -->
@@ -188,7 +190,7 @@ class FormatFixtureTests(unittest.TestCase):
         self.assertTrue(self.history.startswith(HEADER + "\n"))
         self.assertEqual(self.history.splitlines()[0], SCHEMA_MARKER)
         self.assertIn(SCHEMA_MARKER, SPEC.read_text(encoding="utf-8"))
-        self.assertIn(SCHEMA_MARKER, TEMPLATE.read_text(encoding="utf-8"))
+        self.assertIn(SCHEMA_MARKER, INSTRUCTIONS.read_text(encoding="utf-8"))
 
     def test_entries_are_unique_ordered_and_contiguous(self):
         numbers = [number for number, _ in self.blocks]
@@ -334,9 +336,14 @@ class FormatFixtureTests(unittest.TestCase):
             "- Fidelity: Byte-for-byte copy of the clipboard image materialized by "
             "Codex Desktop; binary identity with any pre-clipboard source is not claimed."
         )
-        for path in (FIXTURE, SPEC, TEMPLATE):
+        for path in (FIXTURE, SPEC, INSTRUCTIONS):
             lines = path.read_text(encoding="utf-8").splitlines()
-            expected = fidelity if path == FIXTURE else fidelity.removeprefix("- Fidelity: ")
+            if path == FIXTURE:
+                expected = fidelity
+            elif path == INSTRUCTIONS:
+                expected = f"`{fidelity}`"
+            else:
+                expected = fidelity.removeprefix("- Fidelity: ")
             self.assertIn(expected, lines, f"{path} must keep the fidelity value on one line")
 
         manual = " ".join(MANUAL.read_text(encoding="utf-8").split())
@@ -398,42 +405,58 @@ class FormatFixtureTests(unittest.TestCase):
             [path for path in ROOT.rglob("prompt_source_assets") if path.is_dir()], []
         )
 
-    def test_standard_template_contains_required_contract(self):
-        template = TEMPLATE.read_text(encoding="utf-8")
-        normalized_template = " ".join(template.split())
+    def test_loader_and_dedicated_instructions_contain_required_contract(self):
+        loader = " ".join(LOADER.read_text(encoding="utf-8").split())
+        instructions = " ".join(INSTRUCTIONS.read_text(encoding="utf-8").split())
+        for phrase in (
+            "prompt-source-loader-begin",
+            "prompt-source-loader-end",
+            "Capture: enabled",
+            ".prompt-source/instructions-v1.md",
+            "before creating a capture entry or doing requested work",
+            "root and nested `AGENTS.md`",
+            "missing, unreadable, wrong-version, stale, conflicting, or truncated",
+            "continue requested work",
+            "When capture is disabled",
+            "never stage, commit, push, publish, or upload",
+        ):
+            self.assertIn(" ".join(phrase.split()), loader)
+
         required_phrases = [
-            "before performing the requested project work",
-            "Each interaction gets its own sequential entry",
+            "Before work capture each prompt",
             "Capture method: Instruction-mediated",
             "Status: In progress",
             "Completion reason unavailable; no reliable Interrupt event was observed.",
             "Hook-confirmed Interrupt event.",
             "prompt_source_assets/",
             "Do not stage, commit, push, publish, or upload",
-            "raw keystrokes or editor state",
-            "Never alter or delete earlier user input",
-            "prompt-source-standard-begin",
-            "prompt-source-standard-end",
-            "Capture: enabled",
-            "Capture: disabled",
-            "the final `### Git restriction` remains active",
-            "Append the new entry at the physical end",
-            "strictly increasing physical order",
-            "never insertion after a matching result",
-            "move only that newly created block to physical EOF",
+            "raw-keystroke, pre-serialization",
+            "Never rewrite history",
+            "prompt-source-instructions: 1",
+            "prompt-source-instructions-end",
+            "physical EOF",
+            "move only this exact unfinished block to EOF",
             "PromptSourceCode hook matching context",
             "--claim",
             "--replace-entry",
-            "earliest `In progress`, `Hook-assisted`, `Pending` observation",
+            "returned earliest matching `In progress`, `Hook-assisted`, `Pending` entry",
             "Deduplication note",
-            "Never relabel an instruction-created entry as `Hook-assisted`",
-            "absent, disabled, untrusted, unavailable, or failed",
-            "unrecognized or out-of-order entry metadata",
-            "unsupported/future schema marker",
-            "Completed, incomplete, and interrupted states are terminal",
+            "Without valid hook context",
+            "unsafe or future-schema history",
+            "Optional metadata",
+            "current-turn entries",
+            "current Desktop task's first submission",
+            "standard uses `Unknown` unless reliably exposed",
+            "any backtick and no tilde requires `~~~text`, not ```text",
+            "Steering` for every active-turn submission",
+            "has no trusted Stop reason",
+            "#### Artifact 1",
+            "Preserved copy: [filename](<prompt_source_assets/filename>)",
+            "Unavailable reason",
+            "are terminal",
         ]
         for phrase in required_phrases:
-            self.assertIn(" ".join(phrase.split()), normalized_template)
+            self.assertIn(" ".join(phrase.split()), instructions)
 
     def test_readme_is_end_user_front_page_and_moves_technical_detail(self):
         readme = " ".join(README.read_text(encoding="utf-8").split())
@@ -441,13 +464,15 @@ class FormatFixtureTests(unittest.TestCase):
         required_phrases = [
             "The prompt history is the new source code",
             "Why use it?",
-            "Download the latest PromptSourceCode release",
-            "if a root `AGENTS.md` already exists, append the complete template",
-            "That is the complete basic installation",
+            "scripts/instruction_contract.py install",
+            "small marked loader",
+            ".prompt-source/instructions-v1.md",
+            ".prompt-source/validate.py",
+            "That is the complete standard installation",
             "Try it",
             "A simple example",
             "Your history stays under your control",
-            "Test 0.1.0 and tell us how it went",
+            "Test it and tell us how it went",
             "Technical reference for maintainers and advanced users",
         ]
         for phrase in required_phrases:
@@ -462,10 +487,13 @@ class FormatFixtureTests(unittest.TestCase):
             self.assertNotIn(implementation_phrase, readme)
 
         for phrase in (
-            "PromptSourceCode 0.1.0 implements storage schema 1",
+            "current implementation uses storage schema 1",
             "Canonical project output",
             "Capture boundary",
             "Standard capture lifecycle",
+            ".prompt-source/instructions-v1.md",
+            ".prompt-source/validate.py",
+            "300 words/2,048 bytes maximum",
             "Optional hook-assisted capture",
             "UserPromptSubmit",
             "same-directory atomic replacement",
@@ -530,6 +558,9 @@ class FormatFixtureTests(unittest.TestCase):
             "`/usr/bin/python3` 3.9.6",
             "does not claim capture-environment support",
             "Do not rewrite, renumber, normalize, or recreate existing schema-1 entries",
+            ".prompt-source/instructions-v1.md",
+            ".prompt-source/validate.py",
+            "no user-specific global Codex configuration",
             "Modifying a command or handler property invalidates the prior decision",
             "PromptSourceCode 0.1.0 makes no promise that such a tool exists",
         ]
@@ -541,18 +572,20 @@ class FormatFixtureTests(unittest.TestCase):
     def test_installation_guide_covers_the_complete_user_lifecycle(self):
         guide = " ".join(INSTALLATION.read_text(encoding="utf-8").split())
         required = [
-            "Install standard capture in a new project",
-            "Add standard capture to an existing `AGENTS.md`",
+            "Canonical standard layout",
+            "Install in a new or existing project",
             "Verify the first capture",
-            "Update the standard instruction block",
+            "Update the loader and dedicated instructions",
             "Disable and re-enable standard capture",
-            "Remove the standard instructions",
+            "Remove standard capture without deleting history",
+            "Troubleshoot the instruction layout",
             "Optionally install the inert hook files",
             "Review and trust each hook explicitly",
-            "Update, disable, re-enable, or remove the hooks",
-            "Diagnose hook failures without losing the fallback",
-            "Understand Git behavior",
-            "Upgrade an earlier installation",
+            "Update, disable, re-enable, or remove hooks",
+            "Diagnose hook failures without losing fallback",
+            "Generated-provenance Git behavior",
+            "Existing histories and other schemas",
+            ".prompt-source/validate.py",
             "The tested CLI did not display raw trust hashes",
             "modifying a command or handler property invalidates the prior decision",
             "Codex CLI only for hook review and trust",
@@ -574,12 +607,14 @@ class FormatFixtureTests(unittest.TestCase):
         ):
             self.assertIn(" ".join(phrase.split()), roadmap)
 
-    def test_copyable_release_assets_match_the_frozen_manifest(self):
-        manifest = json.loads(RELEASE_MANIFEST.read_text(encoding="utf-8"))
+    def test_copyable_distribution_assets_match_the_current_manifest(self):
+        manifest = json.loads(DISTRIBUTION_MANIFEST.read_text(encoding="utf-8"))
         self.assertEqual(manifest["prompt_source_schema"], 1)
-        self.assertEqual(manifest["release"], "0.1.0")
+        self.assertEqual(manifest["instruction_layout"], "dedicated-instructions-v1")
         expected_paths = {
-            "templates/AGENTS.prompt-source-standard.md",
+            "templates/AGENTS.prompt-source-loader.md",
+            "templates/prompt-source-instructions-v1.md",
+            "scripts/instruction_contract.py",
             "hooks/hooks.json.example",
             "hooks/prompt_source_core.py",
             "hooks/prompt_source_hook.py",
@@ -589,6 +624,9 @@ class FormatFixtureTests(unittest.TestCase):
             payload = (ROOT / relative).read_bytes()
             self.assertEqual(len(payload), expected["byte_count"], relative)
             self.assertEqual(hashlib.sha256(payload).hexdigest(), expected["sha256"], relative)
+
+        historical = json.loads(RELEASE_MANIFEST.read_text(encoding="utf-8"))
+        self.assertEqual(historical["release"], "0.1.0")
 
     def test_release_readiness_report_exists_and_does_not_claim_publication(self):
         report = " ".join(READINESS.read_text(encoding="utf-8").split())
@@ -612,7 +650,7 @@ class FormatFixtureTests(unittest.TestCase):
             )
 
         authored_docs = [*ROOT.glob("*.md"), *sorted((ROOT / "docs").glob("*.md"))]
-        authored_docs.append(TEMPLATE)
+        authored_docs.extend((LOADER, INSTRUCTIONS))
         for path in authored_docs:
             text = path.read_text(encoding="utf-8")
             outside_text = "".join(line for _, line in outside_fence_lines(text))

@@ -161,8 +161,8 @@ direction, or supersedes an earlier instruction.
 
 `Capture method` has one of these values:
 
-- `Instruction-mediated`: the standard `AGENTS.md` instructions caused the agent to
-  create the entry.
+- `Instruction-mediated`: the standard root loader and dedicated project instructions
+  caused the agent to create the entry.
 - `Hook-assisted`: an explicitly enabled hook captured the prompt and the agent reused or
   enriched that hook-created entry.
 
@@ -336,6 +336,8 @@ within its entry:
 - `Attached file`
 - `Attached image`
 - `Pasted image`
+- `Repository file snapshot`
+- `Requested artifact`
 
 For a successfully preserved artifact, `Kind`, `Preserved copy`, `Byte count`, `SHA-256`,
 and `Fidelity` are required. `Original name (JSON)` is optional because Desktop may not
@@ -346,9 +348,11 @@ backslashes, Unicode, and control characters are unambiguous. Absolute external 
 paths are omitted unless they add necessary factual context; they are never converted
 into repository links.
 
-An attached file or attached image is the original file exposed by Desktop. Copy it
-without transformation and compare source and destination byte count and SHA-256 when the
-source path remains available.
+An attached file or attached image is the original file exposed by Desktop. A repository
+file snapshot is a point-in-time copy requested from inside the project. A requested
+artifact is another source the user explicitly asked to preserve, whether it is accessible
+or unavailable. Copy accessible sources without transformation and compare source and
+destination byte count and SHA-256 when the source path remains available.
 
 A pasted image is the temporary file materialized and exposed by Desktop. Preserve that
 file byte-for-byte and use this exact fidelity statement as one physical Markdown field

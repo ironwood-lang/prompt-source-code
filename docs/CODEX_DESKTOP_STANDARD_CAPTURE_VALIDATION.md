@@ -9,8 +9,8 @@ that later report does not alter the facts recorded here.
 
 Validation completed on 2026-09-16 in Codex Desktop 26.908.70816 (9275) on macOS
 26.6.2 (25G83). The full-case disposable project ran at the local Git repository
-`/Users/soliveira/Vibe/PSC_Test` and was preserved after the run as
-`/Users/soliveira/Vibe/PSC_Test_M2_validation_and_append_defect_20260916`; its local bare
+`~/Vibe/PSC_Test` and was preserved after the run as
+`~/Vibe/PSC_Test_M2_validation_and_append_defect_20260916`; its local bare
 test remote was preserved as `PSC_M2_full_validation_origin_20260916.git`. The pre-existing
 feasibility project formerly at that location was preserved intact as
 `PSC_Test_M0_backup_20260916` before the clean repository was initialized.
@@ -94,7 +94,7 @@ Re-enabling from the disabled task also preserved the history unchanged.
 
 The first cross-task update exposed the misplaced-append defect described above. That
 project was preserved without silently rearranging the captured history. A second clean
-repository was then initialized at `/Users/soliveira/Vibe/PSC_Test` with local commit
+repository was then initialized at `~/Vibe/PSC_Test` with local commit
 `db3a495` and bare remote `PSC_M2_append_fix_origin.git`. Two interactions in one Desktop
 task produced ordered Entries `000001` and `000002`, both with repeated
 `Changed files: None.` results. A new Desktop task initially misplaced Entry `000003` after

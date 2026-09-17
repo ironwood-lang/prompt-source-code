@@ -27,8 +27,8 @@ evidence remains separately dated in the linked reports and was not rewritten.
 ## Disposable project isolation
 
 The run used the fresh local Git project
-`/Users/soliveira/Vibe/PSC_M4_V1_ACCEPTANCE_20260917` and the separate bare origin
-`/Users/soliveira/Vibe/PSC_M4_V1_ACCEPTANCE_origin_20260917.git`. The previously used
+`~/Vibe/PSC_M4_V1_ACCEPTANCE_20260917` and the separate bare origin
+`~/Vibe/PSC_M4_V1_ACCEPTANCE_origin_20260917.git`. The previously used
 Milestone 3 project was inspected before being preserved at a distinct path; it was not
 reset, destroyed, or silently reused.
 

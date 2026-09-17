@@ -19,21 +19,28 @@ PromptSourceCode helps you:
 - review a project's history in an ordinary readable file; and
 - keep that history local unless you explicitly decide to share it.
 
-PromptSourceCode 0.1.0 is designed for local projects used with Codex Desktop. Other coding agent harnesses will be supported soon.
+PromptSourceCode is designed for local projects used with Codex Desktop. Other coding
+agent harnesses are not currently supported.
 
 ## Install
 
-1. [Download the latest PromptSourceCode release](https://github.com/ironwood-lang/prompt-source-code/releases/latest)
-   and unzip it.
-2. Find `templates/AGENTS.prompt-source-standard.md` in the downloaded folder.
-3. In the project you want to use:
-   - if there is no root `AGENTS.md`, copy the template there and rename it `AGENTS.md`;
-   - if a root `AGENTS.md` already exists, append the complete template to it without
-     removing your existing instructions.
-4. Open that project in Codex Desktop and start a new task.
+1. Download and unzip PromptSourceCode.
+2. From the downloaded folder, run:
 
-That is the complete basic installation. You do not need the optional hooks to get
-started.
+   ```text
+   python3 scripts/instruction_contract.py install /path/to/your/project
+   ```
+
+   This appends a small marked loader to the root `AGENTS.md` without replacing existing
+   instructions and installs the capture contract at
+   `.prompt-source/instructions-v1.md` plus its project-local schema validator at
+   `.prompt-source/validate.py`.
+3. Review the three installed files, then open the project in Codex Desktop and start a
+   new task.
+
+That is the complete standard installation. It uses only project files and the system
+Python standard library—no global Codex configuration, hook, skill, plugin, background
+service, or network service.
 
 ## Try it
 
@@ -86,12 +93,12 @@ improve exact prompt matching and record trusted Stop-button interruptions. It r
 separate review and activation; see the
 [optional hooks guide](docs/OPTIONAL_HOOKS.md) when you are ready.
 
-## Test 0.1.0 and tell us how it went
+## Test it and tell us how it went
 
 Please try the same path a new user would:
 
-- download and unzip the release;
-- install the standard template in a new local project;
+- download and unzip PromptSourceCode;
+- install the loader and dedicated instructions in a new local project;
 - send the example prompt and one follow-up in Codex Desktop;
 - confirm the history is easy to find and understand; and
 - confirm your ordinary project files still behave normally.

@@ -148,6 +148,34 @@ def capture_steering_worker(root, start, queue):
 
 
 class HookCaptureTests(unittest.TestCase):
+    def test_artifact_schema_rejects_observed_noncanonical_forms(self):
+        history = (ROOT / "tests/fixtures/expected-history.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(len(core.validate_history(history)), 12)
+        mutations = {
+            "missing heading": ("#### Artifact 1\n\n", ""),
+            "invalid kind": ("- Kind: Attached file", "- Kind: Attached text file"),
+            "name field": ("- Original name (JSON):", "- Name:"),
+            "link field": ("- Preserved copy:", "- Link:"),
+            "byte field": ("- Byte count:", "- Bytes:"),
+            "plain link target": (
+                "](<prompt_source_assets/prompt-000006-notes.txt>)",
+                "](prompt_source_assets/prompt-000006-notes.txt)",
+            ),
+            "unavailable reason field": ("- Unavailable reason:", "- Reason:"),
+            "pasted-image fidelity": (
+                "- Fidelity: " + core.PASTED_IMAGE_FIDELITY,
+                "- Fidelity: Similar to the pasted image.",
+            ),
+        }
+        for label, (old, new) in mutations.items():
+            with self.subTest(label=label):
+                mutated = history.replace(old, new, 1)
+                self.assertNotEqual(mutated, history)
+                with self.assertRaises(core.HistoryConflict):
+                    core.validate_history(mutated)
+
     def test_representative_hook_event_fixture_parses_and_associates(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

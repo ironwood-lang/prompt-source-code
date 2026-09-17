@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Small standard-library core for PromptSourceCode's optional Codex hooks."""
+"""Standard-library schema validator and optional-hook core for PromptSourceCode."""
 
 from __future__ import annotations
 
@@ -33,6 +33,10 @@ Generated history and assets are local provenance. Do not stage, commit, push, p
 or upload them unless the user explicitly requests it.
 """
 INTERRUPT_REASON = "Hook-confirmed Interrupt event."
+PASTED_IMAGE_FIDELITY = (
+    "Byte-for-byte copy of the clipboard image materialized by Codex Desktop; "
+    "binary identity with any pre-clipboard source is not claimed."
+)
 UNCERTAIN_DEDUPLICATION_NOTE = (
     "Identity with a hook-created observation could not be established safely; "
     "both observations were preserved."
@@ -48,6 +52,20 @@ OPTIONAL_ENTRY_FIELDS = (
     "Continues",
     "Supersedes",
     "Status reason",
+)
+ARTIFACT_KINDS = {
+    "Attached file",
+    "Attached image",
+    "Pasted image",
+    "Repository file snapshot",
+    "Requested artifact",
+}
+OPTIONAL_PRESERVED_ARTIFACT_FIELDS = (
+    "Repository source",
+    "Source byte count",
+    "Source SHA-256",
+    "Reuse note",
+    "Pre-clipboard comparison",
 )
 
 
@@ -374,6 +392,119 @@ def _decode_payload(
     return prompt, final_newline
 
 
+def _validate_artifacts(block: str) -> None:
+    """Validate the closed schema-1 artifact record structure, when present."""
+    outside, balanced = _outside_fence_lines(block)
+    if not balanced:
+        raise HistoryConflict("entry contains an unclosed fenced payload")
+    sections = [
+        offset
+        for offset, line in outside
+        if line.rstrip("\r\n") == "### Artifacts"
+    ]
+    if not sections:
+        return
+    if len(sections) != 1:
+        raise HistoryConflict("entry contains duplicate Artifacts sections")
+    section_start = sections[0]
+    section_end = len(block)
+    for offset, line in outside:
+        stripped = line.rstrip("\r\n")
+        if offset > section_start and stripped.startswith("### "):
+            section_end = offset
+            break
+    headings: list[tuple[int, int, int]] = []
+    for offset, line in outside:
+        if not (section_start < offset < section_end):
+            continue
+        match = re.fullmatch(r"#### Artifact (\d+)\r?\n?", line)
+        if match:
+            headings.append((offset, offset + len(line), int(match.group(1))))
+    if not headings:
+        raise HistoryConflict("Artifacts section has no numbered artifact records")
+    numbers = [number for _, _, number in headings]
+    if numbers != list(range(1, len(numbers) + 1)):
+        raise HistoryConflict("artifact record numbers are not consecutive from 1")
+
+    for index, (_, content_start, number) in enumerate(headings):
+        content_end = headings[index + 1][0] if index + 1 < len(headings) else section_end
+        fields: list[tuple[str, str]] = []
+        for offset, line in outside:
+            if not (content_start <= offset < content_end):
+                continue
+            stripped = line.rstrip("\r\n")
+            if not stripped:
+                continue
+            match = re.fullmatch(r"- ([A-Za-z][A-Za-z0-9 ()-]*): (.*)", stripped)
+            if match is None:
+                raise HistoryConflict(
+                    f"Artifact {number} contains noncanonical record content"
+                )
+            fields.append((match.group(1), match.group(2)))
+        keys = [key for key, _ in fields]
+        if len(keys) != len(set(keys)):
+            raise HistoryConflict(f"Artifact {number} contains a duplicate field")
+        values = dict(fields)
+        if not keys or keys[0] != "Kind" or values["Kind"] not in ARTIFACT_KINDS:
+            raise HistoryConflict(f"Artifact {number} has an invalid or missing Kind")
+        original_index = 1 if len(keys) > 1 and keys[1] == "Original name (JSON)" else None
+        variant_start = 2 if original_index is not None else 1
+        if original_index is not None:
+            try:
+                original_name = json.loads(values["Original name (JSON)"])
+            except json.JSONDecodeError as exc:
+                raise HistoryConflict(
+                    f"Artifact {number} Original name (JSON) is invalid"
+                ) from exc
+            if not isinstance(original_name, str):
+                raise HistoryConflict(
+                    f"Artifact {number} Original name (JSON) is not a string"
+                )
+
+        remaining = keys[variant_start:]
+        if remaining and remaining[0] == "Preservation":
+            if remaining != ["Preservation", "Unavailable reason"]:
+                raise HistoryConflict(
+                    f"Artifact {number} unavailable fields are missing or out of order"
+                )
+            if values["Preservation"] != "Unavailable" or not values["Unavailable reason"]:
+                raise HistoryConflict(
+                    f"Artifact {number} has an invalid unavailable-artifact record"
+                )
+            continue
+
+        required = ["Preserved copy", "Byte count", "SHA-256", "Fidelity"]
+        if remaining[: len(required)] != required:
+            raise HistoryConflict(
+                f"Artifact {number} preserved fields are missing or out of order"
+            )
+        optional = remaining[len(required) :]
+        try:
+            ranks = [OPTIONAL_PRESERVED_ARTIFACT_FIELDS.index(key) for key in optional]
+        except ValueError as exc:
+            raise HistoryConflict(
+                f"Artifact {number} contains an unrecognized optional field"
+            ) from exc
+        if ranks != sorted(ranks):
+            raise HistoryConflict(f"Artifact {number} optional fields are out of order")
+        link = re.fullmatch(
+            r"\[([^\]]+)\]\(<(prompt_source_assets/([^/>]+))>\)",
+            values["Preserved copy"],
+        )
+        if link is None or link.group(1) != link.group(3):
+            raise HistoryConflict(f"Artifact {number} Preserved copy link is invalid")
+        if not values["Byte count"].isdecimal():
+            raise HistoryConflict(f"Artifact {number} Byte count is not decimal")
+        if re.fullmatch(r"[0-9a-f]{64}", values["SHA-256"]) is None:
+            raise HistoryConflict(f"Artifact {number} SHA-256 is invalid")
+        if not values["Fidelity"]:
+            raise HistoryConflict(f"Artifact {number} Fidelity is empty")
+        if values["Kind"] == "Pasted image" and values["Fidelity"] != PASTED_IMAGE_FIDELITY:
+            raise HistoryConflict(
+                f"Artifact {number} pasted-image Fidelity is not canonical"
+            )
+
+
 def validate_history(text: str) -> list[Entry]:
     if not text.startswith(SCHEMA_MARKER + "\n"):
         raise HistoryConflict("existing history does not have the version 1 schema marker")
@@ -476,6 +607,7 @@ def validate_history(text: str) -> list[Entry]:
             raise HistoryConflict("In progress entries cannot contain a Result section")
         if fields["Status"] in {"Incomplete", "Interrupted"} and result_count > 1:
             raise HistoryConflict("terminal unfinished entries may contain at most one Result section")
+        _validate_artifacts(block)
         prompt, final_newline = _decode_payload(
             block,
             require_integrity=fields["Capture method"] == "Hook-assisted",
@@ -801,6 +933,18 @@ def _write_json(value: dict[str, Any]) -> None:
     sys.stdout.write(json.dumps(value, ensure_ascii=False, separators=(",", ":")) + "\n")
 
 
+def validate_history_file(root: Path) -> list[Entry]:
+    root = _validated_root(root)
+    path = root / HISTORY_NAME
+    if not path.is_file():
+        raise HistoryConflict(f"{HISTORY_NAME} is missing")
+    try:
+        text = path.read_bytes().decode("utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise HistoryConflict(f"cannot read history as UTF-8: {exc}") from exc
+    return validate_history(text)
+
+
 def run_hook(root: Path, payload: dict[str, Any]) -> int:
     event_name = payload.get("hook_event_name")
     if event_name == "UserPromptSubmit":
@@ -826,10 +970,19 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="atomically replace one hook entry from stdin JSON",
     )
+    mode.add_argument(
+        "--validate-history",
+        action="store_true",
+        help="validate the project history without changing it",
+    )
     arguments = parser.parse_args(argv)
     try:
-        payload = read_event()
         root = Path.cwd()
+        if arguments.validate_history:
+            entries = validate_history_file(root)
+            sys.stdout.write(f"PromptSourceCode: history valid ({len(entries)} entries)\n")
+            return 0
+        payload = read_event()
         if arguments.claim:
             entry = claim_entry(root, payload)
             _write_json({"entry_number": entry.number, "entry_sha256": entry.utf8_sha256})

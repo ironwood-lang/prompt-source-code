@@ -1,22 +1,24 @@
-# PromptSourceCode 0.1.0 Technical Reference
+# PromptSourceCode Technical Reference
 
 This document contains the architecture, format boundaries, lifecycle behavior,
 validation status, and contributor information deliberately omitted from the end-user
-front page. PromptSourceCode 0.1.0 implements storage schema 1.
+front page. The current implementation uses storage schema 1.
 
 ## Architecture
 
 PromptSourceCode targets Codex Desktop and provides two capture layers:
 
-1. **Standard capture:** repository instructions in `AGENTS.md`. This is the complete,
-   required default and works without hooks, plugins, background services, or network
-   access.
+1. **Standard capture:** a small marked loader in the root `AGENTS.md` reads the complete
+   operational contract from `.prompt-source/instructions-v1.md` before capture or task
+   work. A project-local `.prompt-source/validate.py` checks schema-1 history before work
+   and finalization. This required default works without global Codex configuration, hooks,
+   skills, plugins, background services, or network access.
 2. **Hook-assisted capture:** an explicitly enabled optional enhancement using
    `UserPromptSubmit` and `Interrupt`. Hooks improve prompt fidelity, identify mid-turn
    steering through turn metadata, and record button-only interruptions.
 
 A skill is not part of the capture path because skill selection is conditional. Hooks do
-not replace the `AGENTS.md` instructions; they enhance them.
+not replace the loader and dedicated instructions; they enhance them.
 
 ## Canonical project output
 
@@ -77,6 +79,7 @@ states.
 
 Evidence is preserved in:
 
+- [`MILESTONE_6_VALIDATION_20260917.md`](MILESTONE_6_VALIDATION_20260917.md)
 - [`CODEX_DESKTOP_STANDARD_CAPTURE_VALIDATION.md`](CODEX_DESKTOP_STANDARD_CAPTURE_VALIDATION.md)
 - [`CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md`](CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md)
 - [`CODEX_DESKTOP_V1_RELEASE_READINESS.md`](CODEX_DESKTOP_V1_RELEASE_READINESS.md)
@@ -85,17 +88,31 @@ Evidence is preserved in:
 
 ## Standard capture lifecycle
 
-Install the complete contents of
-[`../templates/AGENTS.prompt-source-standard.md`](../templates/AGENTS.prompt-source-standard.md)
-in the captured project's root `AGENTS.md`. In an existing file, append the marked block
-without replacing unrelated instructions. The root [`../AGENTS.md`](../AGENTS.md) in this
-development repository is contributor guidance and must not be copied into an end-user
-project.
+Install [`../templates/AGENTS.prompt-source-loader.md`](../templates/AGENTS.prompt-source-loader.md)
+as the bounded root loader and
+[`../templates/prompt-source-instructions-v1.md`](../templates/prompt-source-instructions-v1.md)
+at `.prompt-source/instructions-v1.md`. The root [`../AGENTS.md`](../AGENTS.md) here is
+contributor guidance and must not be copied into an end-user project.
 
-The template contains an enabled/disabled control and stable begin/end markers. Updating
-replaces the complete marked block without rewriting existing history. Disabling stops
-future standard capture but leaves generated data untouched. Removing the block also
-leaves existing history intact unless the user separately chooses to delete it.
+The installer also copies the shared standard-library schema module from
+[`../hooks/prompt_source_core.py`](../hooks/prompt_source_core.py) to
+`.prompt-source/validate.py`. The standard contract invokes only its read-only
+`--validate-history` mode. The installed file is not configured as a hook, does not
+activate hooks, and performs no network or Git operation during validation.
+
+The canonical project path and instruction marker are versioned independently of storage
+schema. The loader is 300 words/2,048 bytes maximum, the dedicated contract is 900
+words/6,144 bytes maximum, and their combined always-read footprint is 1,200 words/8,192
+bytes maximum. [`../scripts/instruction_contract.py`](../scripts/instruction_contract.py)
+enforces these ceilings, appends without replacing existing root guidance, installs the
+matching validator, and leaves nested instructions untouched.
+
+The loader contains the enabled/disabled control and exact begin/end markers. Updating
+replaces only that block, the dedicated file, and the validator without rewriting history.
+Missing, unreadable, stale, conflicting, or truncated instructions—or a missing or
+noncanonical validator—fail closed for capture while ordinary work continues under other
+applicable project instructions. Disabling or removing the standard installation leaves
+existing provenance untouched.
 
 The full operational procedure is in [`INSTALLATION.md`](INSTALLATION.md).
 
@@ -154,6 +171,6 @@ python3 -m unittest discover -s tests -v
 ```
 
 The copyable standard and hook files are frozen by byte count and SHA-256 in
-[`../tests/fixtures/release-manifest.json`](../tests/fixtures/release-manifest.json).
+[`../tests/fixtures/distribution-manifest.json`](../tests/fixtures/distribution-manifest.json).
 Development must follow the root [`../AGENTS.md`](../AGENTS.md), keep documentation and
 tests aligned, and never enable live capture in this repository.

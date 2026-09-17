@@ -24,9 +24,13 @@ file reusable and unchecked for future regression runs.
 - [ ] Record the source commit, release-asset manifest, Desktop, macOS, Python, and Git
   versions used by the run without publishing full session or turn identifiers.
 - [ ] Create a disposable local Git repository and open it as a project in Codex Desktop.
-- [ ] Add the contents of
-  [`templates/AGENTS.prompt-source-standard.md`](../templates/AGENTS.prompt-source-standard.md)
-  to the disposable project's root `AGENTS.md`.
+- [ ] Append
+  [`templates/AGENTS.prompt-source-loader.md`](../templates/AGENTS.prompt-source-loader.md)
+  to the disposable project's root `AGENTS.md`, and install
+  [`templates/prompt-source-instructions-v1.md`](../templates/prompt-source-instructions-v1.md)
+  at `.prompt-source/instructions-v1.md`, plus
+  [`hooks/prompt_source_core.py`](../hooks/prompt_source_core.py) at
+  `.prompt-source/validate.py`.
 - [ ] Confirm that no PromptSourceCode hook, skill, plugin, background service, or network
   dependency is enabled for the standard-path run.
 - [ ] Confirm that the first captured interaction creates one root `PROMPT_SOURCE.md` with
@@ -87,24 +91,24 @@ file reusable and unchecked for future regression runs.
 
 ## Standard-capture lifecycle
 
-- [ ] Starting from the enabled final template, complete an ordinary standard capture and
-  record the history byte count and SHA-256.
+- [ ] Starting from the enabled final loader, dedicated file, and validator, complete an
+  ordinary standard capture and record the history byte count and SHA-256.
 - [ ] Change only the control line to `- Capture: disabled`, then submit a new Desktop
   interaction. Confirm the history and assets remain byte-for-byte unchanged.
 - [ ] Change only the control line back to `- Capture: enabled`, submit another
   interaction, and confirm capture resumes at physical EOF after the greatest structural
   entry number without rewriting older entries.
-- [ ] Confirm removing the instruction block is documented as stopping future standard
-  capture without silently deleting existing history. Do not delete validation evidence
-  merely to exercise that documented behavior.
+- [ ] Confirm removing the loader, dedicated file, and validator is documented as stopping
+  future standard capture without silently deleting existing history. Do not delete
+  validation evidence merely to exercise that documented behavior.
 
 ## Optional hook-assisted validation
 
 Run this section in another fresh disposable local Git project. Preserve earlier projects
-and evidence. Use the final standard template from the first Desktop prompt, and keep the
-hook source and example definition inert until the listed explicit installation and trust
-steps. Codex CLI is allowed only for `/hooks` review and trust; every capture case uses
-Codex Desktop.
+and evidence. Use the final standard installation from the first Desktop prompt, and keep
+the hook source and example definition inert until the listed explicit installation and
+trust steps. Codex CLI is allowed only for `/hooks` review and trust; every capture case
+uses Codex Desktop.
 
 - [ ] Before installing hooks, complete one standard-capture interaction and confirm it is
   `Instruction-mediated`.
