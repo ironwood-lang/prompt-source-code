@@ -81,12 +81,12 @@ disabled capture control, removal guidance, a same-entry collision check, and a
 single-physical-line pasted-image fidelity field. A post-run cross-task test also exposed
 ambiguous insertion after repeated result text; the contract now requires EOF-only append,
 physical-order verification, and bounded repair of only a newly misplaced unfinished
-block before task work. The optional hook enhancement remains Milestone 3 work; version 1
-release hardening and tagging remain Milestone 4 work.
+block before task work. Optional hook work was subsequently completed in Milestone 3;
+version 1 release hardening and tagging remain Milestone 4 work.
 
 ## Milestone 3: Optional Hook Enhancement
 
-**Status:** Not started
+**Status:** Complete
 
 - Implement minimal `UserPromptSubmit` and `Interrupt` handlers.
 - Keep hook installation inert until the user explicitly enables it.
@@ -99,6 +99,28 @@ release hardening and tagging remain Milestone 4 work.
 
 **Exit criterion:** An opted-in user gains deterministic agent-visible text capture and
 explicit interruption records without changing the canonical storage format.
+
+Completed on 2026-09-17 in a fresh disposable local Git project using Codex Desktop
+26.911.61220 (9647) on macOS 26.6.2. The implementation uses only local standard-library
+Python, `UserPromptSubmit`, and `Interrupt`. Explicit project-local installation, separate
+Codex CLI `/hooks` review and trust, and a full Desktop restart were exercised. Codex CLI
+was not used as the capture environment.
+
+The live run covered exact event bytes and final-newline state, session/turn association,
+ordinary follow-ups, two same-turn steering messages, repeated identical prompts,
+one-to-one agent claims, correction, no-change work, separate artifact enrichment, a real
+Stop with a trusted interruption, a conservative unmatched interrupt, guarded hook
+failure with standard fallback, generated-history Git isolation, final storage topology,
+and standard capture after both hooks were disabled. Deterministic tests additionally
+covered simultaneous processes, prompt/interrupt/enrichment races, malformed and
+structurally conflicting history, and failure before atomic replacement.
+
+Validation exposed and resolved four material defects: an internal Desktop feature event
+crossed the initial event boundary, a structural separator destabilized an earlier entry
+digest, interruption metadata used noncanonical spacing, and an unguarded handler launch
+failure blocked Desktop message delivery. Evidence and the resulting boundaries are
+recorded in
+[`CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md`](CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md).
 
 ## Milestone 4: Version 1 Release
 

@@ -56,28 +56,29 @@ they entered the clipboard.
 
 ## Project Status
 
-Milestone 2, the standard-capture release candidate, is complete. The standard
-instructions were exercised from the first prompt in a clean disposable local Git project
-using Codex Desktop 26.908.70816 (9275) on macOS 26.6.2. The run covered complex text,
-follow-ups, two in-turn steering messages, correction, no-change work, attachments, image
-paste fidelity, filename collision handling, repository-local and unavailable artifacts,
-real Stop-button recovery, final structure, and practical Git behavior.
+Milestones 2 and 3 are complete. Standard capture was validated from the first prompt in
+a clean disposable local Git project with no hook, skill, plugin, background service, or
+network dependency. Its release-candidate run covered follow-ups, in-turn steering,
+corrections, no-change work, artifacts, real Stop-button recovery, lifecycle controls,
+final structure, and practical Git behavior.
 
-Post-run lifecycle checks then exercised the final enable/disable control and exposed an
-ambiguous physical append. The hardened EOF verification caught and repaired that exact
-failure mode in a second clean Desktop run before task work began.
-
-Standard capture remains instruction-mediated. It requires no hook, skill, plugin,
-background service, or network access, and it does not claim independent verification of
-agent-visible text. The optional hook enhancement remains Milestone 3 work; version 1
-release hardening remains Milestone 4 work.
+The optional hook enhancement was then validated in a fresh disposable project using
+Codex Desktop 26.911.61220 (9647) on macOS 26.6.2. The run covered explicit trust and
+restart, exact event-text capture, ordinary follow-ups, same-turn steering, repeated
+identical prompts, agent enrichment without duplication, correction, artifact enrichment,
+a real trusted `Interrupt`, guarded hook failure with standard fallback, concurrent and
+failure-injected writes, Git isolation, and standard capture after both hooks were
+disabled. Defects found during the run were preserved as evidence and hardened before the
+final cases. Version 1 release hardening remains Milestone 4 work.
 
 See:
 
 - [Canonical format](docs/PROMPT_SOURCE_FORMAT.md)
 - [Installable standard-capture instructions](templates/AGENTS.prompt-source-standard.md)
+- [Optional hook installation and trust](docs/OPTIONAL_HOOKS.md)
 - [Manual Codex Desktop validation checklist](docs/MANUAL_CODEX_DESKTOP_VALIDATION.md)
 - [Standard-capture release-candidate evidence](docs/CODEX_DESKTOP_STANDARD_CAPTURE_VALIDATION.md)
+- [Optional-hook capture evidence](docs/CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md)
 - [Codex Desktop capture experiment](docs/CODEX_DESKTOP_CAPTURE_EXPERIMENT.md)
 - [Implementation roadmap](docs/ROADMAP.md)
 
@@ -126,7 +127,8 @@ Change only the template control line from `- Capture: enabled` to
 are not added merely because the inactive block is present. The generated-history Git
 restriction remains active while capture is disabled. Re-enable future capture by changing
 `disabled` back to `enabled`; the next captured interaction continues after the greatest
-existing structural entry number.
+existing structural entry number. If the optional hooks are installed, disable both hook
+definitions separately before relying on this control to suspend all capture.
 
 ### Remove instructions or generated history
 
@@ -141,6 +143,40 @@ history is no longer wanted. Removing only the assets leaves broken history link
 files were explicitly committed earlier, deleting working-tree copies does not erase them
 from Git history; repository-history rewriting is a separate, destructive operation and is
 outside the standard removal procedure.
+
+## Optional Hook-Assisted Capture
+
+The optional enhancement consists of two inert Python source files and one example hook
+definition under [`hooks/`](hooks/). It uses only `UserPromptSubmit` and `Interrupt`, the
+minimum events established by the Desktop experiment. Nothing under `hooks/` is discovered
+from this development repository, and copying the files into a captured project still
+does not activate them until the owner explicitly reviews, enables, and trusts both exact
+definitions.
+
+`UserPromptSubmit` atomically creates the canonical `Hook-assisted` entry before agent
+work and gives the agent synthetic session, turn, entry, and exact-byte matching context.
+The agent claims the earliest exact match and enriches it instead of adding a duplicate.
+Before writing, the handler validates that the hook transcript identifies a user-created
+Codex Desktop task, excluding subagents and internal feature prompts. Repeated identical
+submissions remain distinct. `Interrupt` changes every unfinished
+hook-assisted interaction in the exact session and turn to the canonical `Interrupted`
+state while preserving completed entries and captured input.
+
+Hook and agent-helper writes share project-directory serialization, full structural
+validation, optimistic entry digests, and same-directory atomic replacement. They leave no
+persistent lock or diagnostic log and perform no network or Git operations. When hooks are
+absent, disabled, untrusted, unavailable, or failing, the standard instruction-mediated
+path remains active. The event definitions use a local shell guard so a handler failure
+does not block Desktop message delivery; direct agent-helper safety failures remain
+nonzero.
+
+Installation requires an explicit project-local copy, separate `/hooks` review and trust
+for `UserPromptSubmit` and `Interrupt` in Codex CLI, and a full Desktop restart. Trust is
+bound to each exact definition; modifying it requires another review, trust decision, and
+restart. Codex CLI is used only for trust management, not as a supported capture
+environment. Never bypass hook trust. See
+[`docs/OPTIONAL_HOOKS.md`](docs/OPTIONAL_HOOKS.md) for installation, update, disable,
+removal, fallback, and troubleshooting procedures.
 
 ## Generated History and Git
 

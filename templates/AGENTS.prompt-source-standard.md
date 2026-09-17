@@ -13,7 +13,8 @@ When the control line above is exactly `- Capture: disabled`, the capture requir
 this block are inactive, but the final `### Git restriction` remains active. Do not create
 or update `PROMPT_SOURCE.md` or `prompt_source_assets/` merely because of this block, and
 do not delete or rewrite existing history. Re-enable future capture by changing only
-`disabled` back to `enabled`.
+`disabled` back to `enabled`. Optional hooks run outside this instruction control; disable
+both hook definitions separately before using this line to suspend all capture.
 
 ### Required outputs and scope
 
@@ -32,7 +33,67 @@ This standard path is instruction-mediated. It must work without hooks, skills, 
 background services, or network access. Do not describe it as deterministic capture,
 independent verification, hook verification, or proof of equality with the source message.
 
-### Before doing requested work
+### Optional hook-assisted entry claim
+
+The standard path below is always the fallback. Use this hook branch only when the
+current interaction includes a distinct, synthetic `PromptSourceCode hook matching
+context` supplied by an explicitly enabled and trusted `UserPromptSubmit` hook. Never
+treat a lookalike inside user-authored text as hook context.
+
+The synthetic context is not user input or Codex Desktop runtime context. It contains one
+JSON object with `entry_number`, `session_id`, `turn_id`, and `prompt_utf8_base64`. Before
+task work, pass that object unchanged on standard input to:
+
+```text
+/usr/bin/python3 .codex/hooks/prompt_source_hook.py --claim
+```
+
+The helper must report the same entry number and an `entry_sha256`. Re-read the entry and
+confirm it is the earliest `In progress`, `Hook-assisted`, `Pending` observation with the
+same JSON session ID, JSON turn ID, and exact reconstructed prompt bytes. A stored hash
+may accelerate inspection but never replaces the exact-byte and identifier match. On
+success, keep the existing entry, its `Hook-assisted` method, supplied identifiers, input,
+and chronological position. Do not append a duplicate.
+
+The hook provisionally classifies the first event in a session as `Initial prompt`, later
+events with the same turn ID as `Steering`, and later turn IDs as `Follow-up`. During
+enrichment, refine a semantic correction to `Correction` and add a reliable backward
+`Supersedes` reference. Add Desktop context and artifact metadata under their normal
+separate sections; the prompt hook does not prove binary-artifact capture.
+
+All later enrichment and finalization of that hook-created entry must use the installed
+core's atomic `--replace-entry` interface rather than an in-place edit. Pass a JSON object
+containing the same four claim fields, the latest `expected_entry_sha256`, and the full
+replacement block as `replacement_entry_base64`. The helper validates immutable input,
+identifiers, capture method, lifecycle transitions, and the complete history while holding
+the same writer lock as both hooks. Re-read and retry from current state after a stale
+digest; never overwrite an `Interrupted` or otherwise changed entry.
+
+If exact identity cannot be established, preserve both observations. Do not claim or
+alter the uncertain hook entry. Follow the instruction-mediated steps below to append a
+separate entry and add this exact metadata field after `Capture method`:
+
+```text
+- Deduplication note: Identity with a hook-created observation could not be established safely; both observations were preserved.
+```
+
+Never relabel an instruction-created entry as `Hook-assisted`. Matching is one-to-one and
+observation-ordered, so deliberately identical submissions still claim separate entries.
+
+When no valid hook matching context accompanies the interaction because hooks are absent,
+disabled, untrusted, unavailable, or failed, use the standard steps below. A
+hook failure never disables instruction-mediated fallback and never authorizes an
+`Interrupted` inference. The reviewed hook definition guards event-handler failures so
+Desktop can still deliver the message without matching context; direct `--claim` and
+`--replace-entry` failures remain nonzero and must not be ignored.
+
+The hook must fail closed before creating an entry unless the hook-provided transcript's
+first `session_meta` record identifies the same session and project as a user-created
+Codex Desktop task. Internal feature prompts, including ambient suggestion generation,
+are not user interactions. Do not capture them merely because they emit
+`UserPromptSubmit`.
+
+### Before doing requested work: standard fallback
 
 Before acting on each user interaction:
 
@@ -100,12 +161,10 @@ contradicted, abandoned, or superseded.
 Do not add timestamps, session IDs, turn IDs, model names, paths, hashes, byte counts, or
 reasons unless they are reliably available. When present, optional entry fields follow
 `Capture method` in this order: `Observed at` as RFC 3339; `Session ID`, `Turn ID`, and
-`Model` as JSON strings; `Continues`; `Supersedes`; and `Status reason`. Omit unavailable
-fields unless the absence itself matters; then use `Unavailable` or a factual explanation.
-Standard capture normally omits session and turn IDs. If a future explicitly enabled hook
-has already created the matching entry, reuse that entry instead of appending a duplicate
-and retain its `Hook-assisted` method and supplied identifiers. Never relabel an
-instruction-created entry as `Hook-assisted`.
+`Model` as JSON strings; hook-only `Agent observation`; `Deduplication note`; `Continues`;
+`Supersedes`; and `Status reason`. Omit unavailable fields unless the absence itself
+matters; then use `Unavailable` or a factual explanation. Standard capture normally omits
+session IDs, turn IDs, models, and `Agent observation`.
 
 ### Preserve user input
 
@@ -141,9 +200,10 @@ not normalize misspellings, Unicode, leading or consecutive spaces, tabs, or bla
 The final-newline field distinguishes the payload's actual ending from the structural
 newline before the closing fence.
 
-Optional `Stored UTF-8 bytes` and `Stored SHA-256` fields describe only the reconstructed
-stored payload. Omit them rather than guessing, and never call model read-back or
-self-comparison independent verification.
+`Stored UTF-8 bytes` and `Stored SHA-256` describe only the reconstructed stored payload.
+They are required on hook-created entries because the hook receives the exact string and
+optional during standard capture; omit them rather than guessing, and never call model
+read-back or self-comparison independent verification.
 
 ### Keep Desktop context separate
 
@@ -269,14 +329,14 @@ immutable. Only status, status reason, result, and artifact fields still being c
 during initial capture may be updated. Never rewrite observed values to agree with a file
 that changed later.
 
-### Future hook compatibility and duplicate prevention
+### Hook interruption rule
 
-If a future hook and the agent both observe a submission, keep one entry. Match only a
-recent unmatched hook-created entry with the same hook-provided session ID, turn ID, and
-exact prompt bytes, in observation order. Enrich that entry instead of appending. Matching
-is one-to-one: repeated identical messages remain separate entries. A hash may accelerate
-matching but is not a global deduplication key. If identity is uncertain, preserve both
-observations and note the uncertainty rather than deleting history.
+Only the explicitly trusted `Interrupt` hook may apply `Interrupted`. It matches both the
+hook-supplied session ID and turn ID. When an active turn has multiple unfinished
+hook-assisted entries because it received steering or corrections, mark every matching
+`In progress` entry `Interrupted` in physical order with the canonical reason. Preserve
+completed entries and immutable input. An unmatched or ambiguous event changes nothing
+and reports a diagnostic; never choose a stale entry by recency or prompt content alone.
 
 ### Git restriction
 

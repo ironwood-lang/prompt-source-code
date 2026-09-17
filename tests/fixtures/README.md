@@ -1,4 +1,4 @@
-# Milestone 1 Fixtures
+# PromptSourceCode Fixtures
 
 These files model canonical output; they do not enable PromptSourceCode capture in this
 repository.
@@ -10,6 +10,8 @@ repository.
 - `artifacts.json` stores Base64 fixture payloads and their verified sizes and SHA-256
   values. The two pasted-image comparison payloads decode to the same one-pixel scanline
   but have different bytes and digests.
+- `hook-events.json` contains non-sensitive representative `UserPromptSubmit` and
+  `Interrupt` objects for deterministic parser and identifier-association tests.
 
 There is intentionally no `prompt_source_assets/` fixture directory. The expected
 history models its flat repository-relative references while the test suite checks the

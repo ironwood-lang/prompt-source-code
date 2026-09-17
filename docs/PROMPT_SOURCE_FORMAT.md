@@ -4,7 +4,7 @@
 
 This document defines the canonical version 1 format produced by PromptSourceCode for
 Codex Desktop projects. It is the normative contract shared by the standard,
-instruction-mediated capture path and the future optional hook-assisted path.
+instruction-mediated capture path and the explicitly enabled optional hook-assisted path.
 
 Version 1 has exactly two persistent outputs in a captured project:
 
@@ -19,7 +19,8 @@ There are no per-prompt directories and no separate input, status, result, or ru
 context files.
 
 The format targets Codex Desktop only. Standard capture does not require hooks, a skill,
-a plugin, a background service, or network access.
+a plugin, a background service, or network access. Hook assistance does not change the
+two-output topology.
 
 ## Fidelity boundary
 
@@ -31,8 +32,10 @@ claim about content that precedes that boundary.
 Standard capture is model-mediated: the agent observes the delivered representation and
 writes it to the history. Reading that text back or hashing the stored representation can
 check the stored file, but it is not independent verification against the source message.
-A future hook can capture the same agent-visible prompt string deterministically; it does
-not move the fidelity boundary back to pre-serialization editor state.
+The optional `UserPromptSubmit` hook captures the same agent-visible prompt string
+deterministically; it does not move the fidelity boundary back to pre-serialization
+editor state. Artifact and Desktop-context enrichment remains agent-mediated when the
+event does not expose sufficient structured information.
 
 ## File initialization
 
@@ -82,9 +85,10 @@ the greatest valid structural entry heading, not one more than the number of ent
 heading-like line inside a fenced user-input or runtime-context payload is data and is not
 an entry. The writer MUST verify that the candidate does not already exist. If a
 concurrent write creates that number, the writer re-reads, renumbers, and retries instead
-of overwriting or duplicating it. Missing numbers are left missing. Full multi-writer
-locking and crash-safe writes belong to the optional hook implementation;
-instruction-mediated capture does not claim that protection.
+of overwriting or duplicating it. Missing numbers are left missing. The optional hook
+writer serializes its own writes and agent-helper replacements with a project-directory
+lock and same-directory atomic replacement. Instruction-mediated capture used without
+that helper does not claim multi-writer or crash-safe protection.
 
 Identical user messages are still distinct interactions and receive distinct entries.
 Content equality by itself is never a reason to suppress an entry.
@@ -132,8 +136,8 @@ direction, or supersedes an earlier instruction.
 
 - `Instruction-mediated`: the standard `AGENTS.md` instructions caused the agent to
   create the entry.
-- `Hook-assisted`: an explicitly enabled future hook captured the prompt and the agent
-  reused or enriched that hook-created entry.
+- `Hook-assisted`: an explicitly enabled hook captured the prompt and the agent reused or
+  enriched that hook-created entry.
 
 Standard capture MUST NOT label itself deterministic, hook-verified, independently
 verified, or `Hook-assisted`.
@@ -148,6 +152,8 @@ order:
 - Session ID: "hook-provided-session-id"
 - Turn ID: "hook-provided-turn-id"
 - Model: "runtime-provided-model-name"
+- Agent observation: Claimed
+- Deduplication note: Identity with a hook-created observation could not be established safely; both observations were preserved.
 - Continues: Entry 000001
 - Supersedes: Entry 000002
 - Status reason: Completion reason unavailable; no reliable Interrupt event was observed.
@@ -159,6 +165,11 @@ order:
   runtime context provides them. They are omitted during ordinary standard capture.
 - `Model` is a JSON string included only when a hook or reliable runtime context provides
   it. It is not inferred from the user interface or filled in later.
+- `Agent observation` is hook-only matching state. A hook creates the entry as `Pending`;
+  exact one-to-one agent matching changes it to `Claimed`. It is omitted for
+  instruction-created entries.
+- `Deduplication note` records the exact safe-preservation outcome when hook/agent identity
+  cannot be established. It is never used to suppress an observation.
 - `Continues` refers to the entry most directly continued by a follow-up or steering
   message.
 - `Supersedes` is required for a correction when the replaced entry can be identified
@@ -227,7 +238,7 @@ Literal spaces, tabs, blank lines, misspellings, and Unicode are not normalized.
 entities or transformed links delivered by Desktop remain in their delivered form; the
 writer does not reverse Desktop serialization.
 
-When known and useful, these optional fields may follow `Final newline` before the fence:
+These fields follow `Final newline` before the fence:
 
 ```markdown
 - Stored UTF-8 bytes: 1234
@@ -235,7 +246,9 @@ When known and useful, these optional fields may follow `Final newline` before t
 ```
 
 They describe the reconstructed stored payload, not independent equality with the source
-message. Omit them rather than guessing.
+message. They are required on `Hook-assisted` entries because the hook has the exact
+string, and optional on instruction-mediated entries where they must be omitted rather
+than guessed.
 
 ## Separating authorship and context
 
@@ -419,6 +432,11 @@ session and turn IDs, and MUST contain:
 ```
 
 An agent instruction, a missing result, or a later guess can never produce this state.
+When one turn contains multiple unfinished hook-assisted interactions, including steering
+or corrections, a matching trusted `Interrupt` event changes every `In progress` entry
+with the exact supplied session and turn IDs to `Interrupted`, in physical order. Entries
+that already completed remain completed. No matching entry, an identifier mismatch, or
+malformed history produces no status change.
 
 ## Results and changed files
 
@@ -456,9 +474,11 @@ The following are immutable once captured:
 - artifact identity and verified preservation metadata.
 
 The lifecycle fields `Status`, `Status reason`, and `Result` are mutable so unfinished
-work can be finalized honestly. Artifact metadata may be appended while initial capture
-is still in progress, but observed values are not rewritten later to match a changed
-file.
+work can be finalized honestly. `Agent observation` may move only from `Pending` to
+`Claimed`. A hook's provisional `Interaction` may be refined to `Correction`, with a
+reliable backward `Supersedes` reference, during agent enrichment. Artifact metadata may
+be appended while initial capture is still in progress, but observed values are not
+rewritten later to match a changed file.
 
 A correction or superseding instruction never deletes or edits an earlier entry. The new
 entry uses `Interaction: Correction` and `Supersedes: Entry NNNNNN`; the earlier user input
@@ -467,26 +487,66 @@ normal lifecycle, for example by stating that it was superseded before implement
 but its original instruction is never rewritten. A completed earlier entry is not
 retroactively changed merely because a later correction exists.
 
-## Future hook deduplication contract
+## Hook-assisted capture and deduplication
 
-The optional hook enhancement MUST produce this same document and entry schema. When a
-hook and the agent observe the same submission, there is still exactly one entry:
+The optional hook enhancement produces this same document and entry schema. Its source
+assets are inert until the user installs, reviews, enables, and trusts both exact hook
+definitions and restarts Desktop. Standard capture remains active when hooks are absent,
+disabled, untrusted, unavailable, or failing.
+
+Before treating `UserPromptSubmit` or `Interrupt` as a capture event, the handler MUST
+validate the hook-provided transcript's first `session_meta` record. Its session and
+project path must match the event, `originator` must be `Codex Desktop`, and
+`thread_source` must be `user`. A subagent marker, absent or unreadable transcript,
+Desktop feature task, CLI task, or metadata mismatch is not a user interaction and MUST
+fail closed without changing history. The ordinary instructions remain the fallback for
+an actual user interaction whose hook cannot establish this boundary.
+
+When a hook and the agent observe the same submission, there is exactly one entry:
 
 1. A hook-created entry is marked `Hook-assisted` and records hook-provided session and
    turn IDs.
-2. Before appending, the agent searches recent unfinished hook-created entries for the
-   same session ID, turn ID, and exact prompt bytes. It enriches the earliest unmatched
-   entry rather than adding another.
+2. The hook marks the entry `Agent observation: Pending` and supplies synthetic matching
+   context separately from user input. Before appending, the agent searches unfinished
+   hook-created entries for the same session ID, turn ID, and exact prompt bytes. It
+   claims and enriches the earliest unmatched entry in physical observation order.
 3. Matching is one-to-one and order-preserving. Two intentionally repeated identical
    messages remain two entries; each hook observation can be claimed at most once.
 4. A stored SHA-256 may accelerate comparison but does not replace exact-byte and
    identifier matching, and it is not a global content deduplication key.
 5. If identity cannot be established reliably, the implementation preserves both
-   observations and marks the uncertainty rather than silently deleting history.
+   observations. The instruction-created entry uses the exact `Deduplication note` above;
+   neither observation is deleted or relabeled.
+6. An instruction-created entry is never relabeled `Hook-assisted`.
 
-The hook design must also associate all steering entries and any `Interrupt` event with
-the supplied turn ID. Implementing hooks, trust onboarding, locking, and concurrent-write
-protection is outside Milestone 1.
+The hook classifies later events sharing a turn ID as steering and different-turn events
+in the same session as follow-ups; the agent can refine semantic corrections without
+changing the captured prompt. `Interrupt` uses both identifiers and never infers a stop
+from user prose or an unfinished entry.
+
+### Hook write safety
+
+Every hook append, claim, interruption, and agent-helper replacement MUST hold the same
+writer lock, validate the complete version 1 history, and use a temporary file in the
+history's directory followed by atomic replacement. The writer rejects malformed or
+truncated history, a non-version-1 marker, duplicate or non-increasing structural entry
+headings, stale expected entry content, and immutable-field changes. It does not silently
+repair unrelated corruption.
+
+The blank line between structural entries is a document separator, not part of either
+entry's optimistic-concurrency identity. Appending a later entry therefore cannot change
+the digest of an earlier unchanged entry; an actual edit to that entry still does.
+
+Temporary files and locking exist only during an active operation. They are not
+persistent project outputs. A failed replacement before the atomic rename leaves the
+last complete history in place. Hook code performs no network or Git operations and
+writes no persistent diagnostic log; failures use stderr and exit status.
+
+The trusted hook definition MUST keep a handler failure nonblocking for Desktop message
+delivery: it preserves a local stderr diagnostic but returns without matching context so
+the standard instruction-mediated path receives the interaction. This guard applies only
+to event invocation. Direct agent claim and replacement helpers retain nonzero failures
+for stale, ambiguous, or unsafe updates.
 
 ## Git policy
 

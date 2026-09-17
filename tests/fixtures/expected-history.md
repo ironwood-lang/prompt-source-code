@@ -306,11 +306,14 @@ Begin a task whose completion cannot later be established.
 - Capture method: Hook-assisted
 - Session ID: "fixture-session-01"
 - Turn ID: "fixture-turn-09"
+- Agent observation: Claimed
 - Status reason: Hook-confirmed Interrupt event.
 
 ### User input
 
 - Final newline: LF
+- Stored UTF-8 bytes: 58
+- Stored SHA-256: ba552fe3a88ce0386f9797feb302c9af0d633ba0b2b07d6e8c507139e74f5f38
 
 ```text
 Begin a task that I will stop from the Desktop interface.

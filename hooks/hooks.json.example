@@ -1,0 +1,30 @@
+{
+  "description": "Optional PromptSourceCode capture for explicitly opted-in Codex Desktop projects.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/sh -c '/usr/bin/python3 .codex/hooks/prompt_source_hook.py || { code=$?; echo \"PromptSourceCode: hook failed with status $code; continuing with standard capture\" >&2; exit 0; }'",
+            "timeout": 10,
+            "statusMessage": "PromptSourceCode: validating Desktop prompt source",
+            "additionalContextLimit": 0
+          }
+        ]
+      }
+    ],
+    "Interrupt": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/sh -c '/usr/bin/python3 .codex/hooks/prompt_source_hook.py || { code=$?; echo \"PromptSourceCode: hook failed with status $code; continuing with standard capture\" >&2; exit 0; }'",
+            "timeout": 3,
+            "statusMessage": "PromptSourceCode: validating Desktop interruption source"
+          }
+        ]
+      }
+    ]
+  }
+}

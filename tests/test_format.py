@@ -15,6 +15,7 @@ TEMPLATE = ROOT / "templates" / "AGENTS.prompt-source-standard.md"
 README = ROOT / "README.md"
 MANUAL = ROOT / "docs" / "MANUAL_CODEX_DESKTOP_VALIDATION.md"
 ROADMAP = ROOT / "docs" / "ROADMAP.md"
+OPTIONAL_HOOKS = ROOT / "docs" / "OPTIONAL_HOOKS.md"
 
 SCHEMA_MARKER = "<!-- prompt-source-schema: 1 -->"
 HEADER = """<!-- prompt-source-schema: 1 -->
@@ -279,6 +280,7 @@ class FormatFixtureTests(unittest.TestCase):
         self.assertEqual(interrupted["Capture method"], "Hook-assisted")
         self.assertIn("Session ID", interrupted)
         self.assertIn("Turn ID", interrupted)
+        self.assertEqual(interrupted["Agent observation"], "Claimed")
         self.assertEqual(interrupted["Status reason"], "Hook-confirmed Interrupt event.")
 
         for _, block in self.blocks:
@@ -414,6 +416,13 @@ class FormatFixtureTests(unittest.TestCase):
             "strictly increasing physical order",
             "never insertion after a matching result",
             "move only that newly created block to physical EOF",
+            "PromptSourceCode hook matching context",
+            "--claim",
+            "--replace-entry",
+            "earliest `In progress`, `Hook-assisted`, `Pending` observation",
+            "Deduplication note",
+            "Never relabel an instruction-created entry as `Hook-assisted`",
+            "absent, disabled, untrusted, unavailable, or failed",
         ]
         for phrase in required_phrases:
             self.assertIn(" ".join(phrase.split()), normalized_template)
@@ -427,9 +436,47 @@ class FormatFixtureTests(unittest.TestCase):
             "Remove instructions or generated history",
             "agent-behavior restriction, not an automatic `.gitignore` rule",
             "Never copy it into an end-user project",
+            "Optional Hook-Assisted Capture",
+            "separate `/hooks` review and trust",
+            "Never bypass hook trust",
         ]
         for phrase in required_phrases:
             self.assertIn(" ".join(phrase.split()), readme)
+
+    def test_hook_contract_and_lifecycle_documentation_are_aligned(self):
+        spec = " ".join(SPEC.read_text(encoding="utf-8").split())
+        hooks = " ".join(OPTIONAL_HOOKS.read_text(encoding="utf-8").split())
+        manual = " ".join(MANUAL.read_text(encoding="utf-8").split())
+        required_spec = [
+            "Agent observation: Pending",
+            "same session ID, turn ID, and exact prompt bytes",
+            "one-to-one and order-preserving",
+            "project-directory lock and same-directory atomic replacement",
+            "Hook-confirmed Interrupt event.",
+            "failed replacement before the atomic rename leaves the last complete history",
+        ]
+        required_hooks = [
+            "Codex CLI only for the explicit review-and-trust operation",
+            "Fully restart Codex Desktop",
+            "changes its hash and invalidates the prior decision",
+            "Never use `--dangerously-bypass-hook-trust`",
+            "make no network requests and run no Git commands",
+            "absent, unavailable, disabled, untrusted, or failed",
+            "disable both reviewed definitions",
+        ]
+        required_manual = [
+            "at least two steering messages",
+            "Submit the same text twice deliberately",
+            "press Stop",
+            "failure injection before atomic replacement",
+            "Disable or remove both hooks",
+        ]
+        for phrase in required_spec:
+            self.assertIn(" ".join(phrase.split()), spec)
+        for phrase in required_hooks:
+            self.assertIn(" ".join(phrase.split()), hooks)
+        for phrase in required_manual:
+            self.assertIn(" ".join(phrase.split()), manual)
 
     def test_markdown_fences_and_navigation_links_are_valid(self):
         for path in ROOT.rglob("*.md"):

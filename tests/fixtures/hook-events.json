@@ -1,0 +1,21 @@
+{
+  "user_prompt_submit": {
+    "session_id": "fixture-session-hook-01",
+    "turn_id": "fixture-turn-hook-01",
+    "transcript_path": "__TEST_TRANSCRIPT__",
+    "cwd": "__TEST_ROOT__",
+    "hook_event_name": "UserPromptSubmit",
+    "model": "fixture-model",
+    "permission_mode": "default",
+    "prompt": "Fixture hook prompt with CRLF.\r\n"
+  },
+  "interrupt": {
+    "session_id": "fixture-session-hook-01",
+    "turn_id": "fixture-turn-hook-01",
+    "transcript_path": "__TEST_TRANSCRIPT__",
+    "cwd": "__TEST_ROOT__",
+    "hook_event_name": "Interrupt",
+    "model": "fixture-model",
+    "permission_mode": "default"
+  }
+}

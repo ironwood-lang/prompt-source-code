@@ -103,9 +103,11 @@ order.
 - Standard capture is model-mediated and cannot independently prove text equality at the
   Desktop delivery boundary.
 - Standard capture cannot distinguish a Stop-button interruption from exit, crash,
-  shutdown, or another unfinished cause. Only a future trusted hook may use `Interrupted`.
+  shutdown, or another unfinished cause. Only a trusted optional hook may use `Interrupted`.
 - Instruction-mediated capture does not provide multi-writer locking or crash-safe atomic
-  writes. Those protections and hook/agent deduplication remain Milestone 3 work.
+  writes. Those protections and hook/agent deduplication were deferred to and subsequently
+  completed for optional hook writes in Milestone 3; they do not change this standard-path
+  limitation.
 - This run establishes support only for the tested Codex Desktop and macOS versions. It
   does not establish Codex CLI, IDE extension, cloud, or other-agent support.
 - The clarified one-line fidelity field is covered deterministically; the pasted-image UI
