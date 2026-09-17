@@ -1,7 +1,19 @@
+<!-- prompt-source-standard-begin -->
+
 ## PromptSourceCode standard capture for Codex Desktop
 
 These are end-user project instructions. They govern provenance capture in this project;
 they are not development instructions for the PromptSourceCode repository.
+
+### Capture control
+
+- Capture: enabled
+
+When the control line above is exactly `- Capture: disabled`, the capture requirements in
+this block are inactive, but the final `### Git restriction` remains active. Do not create
+or update `PROMPT_SOURCE.md` or `prompt_source_assets/` merely because of this block, and
+do not delete or rewrite existing history. Re-enable future capture by changing only
+`disabled` back to `enabled`.
 
 ### Required outputs and scope
 
@@ -45,12 +57,22 @@ Before acting on each user interaction:
 3. Re-read the structural entry headings outside fenced payloads. Choose one more than
    the greatest `## Entry NNNNNN` number, padded to at least six digits; never treat a
    heading-like line inside user input or runtime context as structure, count entries,
-   fill a gap, or reuse a number. Immediately before writing, verify that the number is
+   fill a gap, or reuse a number. Verify that the existing structural headings are in
+   strictly increasing physical order; if they are not, do not modify the history and
+   report the structural conflict. Immediately before writing, verify that the number is
    still unused. If it has collided with another write, re-read and retry with the new
    maximum plus one.
-4. Append the new entry with `Status: In progress` and the user input before performing
-   the requested project work. Preservation of an ephemeral Desktop artifact is capture
-   work and may happen immediately after the entry is created.
+4. Append the new entry at the physical end of `PROMPT_SOURCE.md` only. Use an EOF append,
+   never insertion after a matching result, blank line, heading, or other repeated text.
+   Give the entry `Status: In progress` and preserve the user input before performing the
+   requested project work. Preservation of an ephemeral Desktop artifact is capture work
+   and may happen immediately after the entry is created.
+5. Re-read the structural headings after the write and verify that the new entry is the
+   final structural entry and that all headings remain in strictly increasing physical
+   order. If the initial write misplaced the new unfinished block, move only that newly
+   created block to physical EOF without changing its contents, then re-run the full
+   verification. If its exact boundary is uncertain, stop and report the conflict. Do not
+   begin requested project work while verification fails.
 
 Use this entry prefix:
 
@@ -187,11 +209,10 @@ Use repository-relative Markdown links. A preserved-copy path must be a direct c
 from the destination after copying, and compare them with the exposed source when it
 remains accessible.
 
-For a pasted image use this exact fidelity text:
+For a pasted image use this exact fidelity text on one physical Markdown line:
 
 ```text
-Byte-for-byte copy of the clipboard image materialized by Codex Desktop; binary identity
-with any pre-clipboard source is not claimed.
+Byte-for-byte copy of the clipboard image materialized by Codex Desktop; binary identity with any pre-clipboard source is not claimed.
 ```
 
 If external artifact data is unavailable, retain its artifact record with
@@ -263,3 +284,5 @@ Do not stage, commit, push, publish, or upload generated `PROMPT_SOURCE.md` or
 `prompt_source_assets/` unless the user explicitly asks to include those generated
 provenance artifacts. This restriction does not affect normal Git operations for source
 code, tests, documentation, or other project files.
+
+<!-- prompt-source-standard-end -->

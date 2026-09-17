@@ -18,6 +18,14 @@
       "sha256": "afab3cd49cf0a47b361ed2b78bd43febfa7fcfd0ab49fc065d5c36c505a4da98"
     },
     {
+      "id": "attached-image-collision",
+      "kind": "Attached image",
+      "captured_path": "prompt_source_assets/prompt-000007-Logo-Final-002.png",
+      "payload_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4AWMwTpv5HwAENAIyqV2JEgAAAABJRU5ErkJggg==",
+      "byte_count": 70,
+      "sha256": "3759a41b8b57aa59c46ce086048042297abed9ec54a540e85449a357a792ff20"
+    },
+    {
       "id": "pasted-image",
       "kind": "Pasted image",
       "captured_path": "prompt_source_assets/prompt-000008-image-001.png",

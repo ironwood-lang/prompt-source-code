@@ -5,8 +5,8 @@ repository.
 
 - `expected-history.md` is a deliberately named model rather than a live
   `PROMPT_SOURCE.md`. It covers complex text, follow-up and steering chronology, a
-  superseding correction, artifacts, a no-change result, unknown-cause incompletion, and
-  a hook-confirmed interruption.
+  superseding correction, same-entry artifact-name collision handling, a no-change result,
+  unknown-cause incompletion, and a hook-confirmed interruption.
 - `artifacts.json` stores Base64 fixture payloads and their verified sizes and SHA-256
   values. The two pasted-image comparison payloads decode to the same one-pixel scanline
   but have different bytes and digests.

@@ -12,6 +12,9 @@ FIXTURE = ROOT / "tests" / "fixtures" / "expected-history.md"
 ARTIFACTS = ROOT / "tests" / "fixtures" / "artifacts.json"
 SPEC = ROOT / "docs" / "PROMPT_SOURCE_FORMAT.md"
 TEMPLATE = ROOT / "templates" / "AGENTS.prompt-source-standard.md"
+README = ROOT / "README.md"
+MANUAL = ROOT / "docs" / "MANUAL_CODEX_DESKTOP_VALIDATION.md"
+ROADMAP = ROOT / "docs" / "ROADMAP.md"
 
 SCHEMA_MARKER = "<!-- prompt-source-schema: 1 -->"
 HEADER = """<!-- prompt-source-schema: 1 -->
@@ -146,6 +149,28 @@ def png_scanline(payload):
     return ihdr, zlib.decompress(bytes(idat))
 
 
+def markdown_fences_balanced(text):
+    fence_character = None
+    fence_length = 0
+    for line in text.splitlines():
+        if fence_character is None:
+            match = re.match(r"^ {0,3}(`{3,}|~{3,})", line)
+            if match:
+                fence_character = match.group(1)[0]
+                fence_length = len(match.group(1))
+        elif re.fullmatch(
+            r" {0,3}"
+            + re.escape(fence_character)
+            + "{"
+            + str(fence_length)
+            + r",}[ \t]*",
+            line,
+        ):
+            fence_character = None
+            fence_length = 0
+    return fence_character is None
+
+
 class FormatFixtureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -270,12 +295,46 @@ class FormatFixtureTests(unittest.TestCase):
         references = re.findall(
             r"\]\(<(prompt_source_assets/[^>]+)>\)", self.history
         )
-        self.assertEqual(len(references), 3)
+        self.assertEqual(len(references), 4)
         self.assertEqual(len(references), len(set(references)))
         for reference in references:
             remainder = reference.removeprefix("prompt_source_assets/")
             self.assertNotIn("/", remainder)
             self.assertRegex(remainder, r"^prompt-\d{6,}-[A-Za-z0-9._-]+$")
+
+    def test_same_entry_collision_uses_suffix_without_overwrite(self):
+        block = self.by_number[7]
+        base_path = "prompt_source_assets/prompt-000007-Logo-Final.png"
+        collision_path = "prompt_source_assets/prompt-000007-Logo-Final-002.png"
+        self.assertIn(base_path, block)
+        self.assertIn(collision_path, block)
+
+        manifest = json.loads(ARTIFACTS.read_text(encoding="utf-8"))
+        by_path = {
+            artifact.get("captured_path"): artifact
+            for artifact in manifest["artifacts"]
+            if artifact.get("captured_path")
+        }
+        first = base64.b64decode(by_path[base_path]["payload_base64"], validate=True)
+        second = base64.b64decode(
+            by_path[collision_path]["payload_base64"], validate=True
+        )
+        self.assertNotEqual(first, second)
+        self.assertNotEqual(by_path[base_path]["sha256"], by_path[collision_path]["sha256"])
+
+    def test_pasted_image_fidelity_is_one_physical_field_line(self):
+        fidelity = (
+            "- Fidelity: Byte-for-byte copy of the clipboard image materialized by "
+            "Codex Desktop; binary identity with any pre-clipboard source is not claimed."
+        )
+        for path in (FIXTURE, SPEC, TEMPLATE):
+            lines = path.read_text(encoding="utf-8").splitlines()
+            expected = fidelity if path == FIXTURE else fidelity.removeprefix("- Fidelity: ")
+            self.assertIn(expected, lines, f"{path} must keep the fidelity value on one line")
+
+        manual = " ".join(MANUAL.read_text(encoding="utf-8").split())
+        self.assertIn("one physical Markdown line", manual)
+        self.assertIn("In one interaction and therefore one entry", manual)
 
     def test_unavailable_artifact_has_no_invented_copy_metadata(self):
         block = self.by_number[12]
@@ -346,9 +405,46 @@ class FormatFixtureTests(unittest.TestCase):
             "Do not stage, commit, push, publish, or upload",
             "raw keystrokes or editor state",
             "Never alter or delete earlier user input",
+            "prompt-source-standard-begin",
+            "prompt-source-standard-end",
+            "Capture: enabled",
+            "Capture: disabled",
+            "the final `### Git restriction` remains active",
+            "Append the new entry at the physical end",
+            "strictly increasing physical order",
+            "never insertion after a matching result",
+            "move only that newly created block to physical EOF",
         ]
         for phrase in required_phrases:
             self.assertIn(" ".join(phrase.split()), normalized_template)
+
+    def test_readme_documents_standard_capture_lifecycle(self):
+        readme = " ".join(README.read_text(encoding="utf-8").split())
+        required_phrases = [
+            "Install in a new or existing project",
+            "Update the instruction block",
+            "Disable or re-enable future capture",
+            "Remove instructions or generated history",
+            "agent-behavior restriction, not an automatic `.gitignore` rule",
+            "Never copy it into an end-user project",
+        ]
+        for phrase in required_phrases:
+            self.assertIn(" ".join(phrase.split()), readme)
+
+    def test_markdown_fences_and_navigation_links_are_valid(self):
+        for path in ROOT.rglob("*.md"):
+            self.assertTrue(
+                markdown_fences_balanced(path.read_text(encoding="utf-8")),
+                f"Unbalanced Markdown fence in {path}",
+            )
+
+        for path in (README, ROADMAP):
+            text = path.read_text(encoding="utf-8")
+            for target in re.findall(r"\[[^\]]+\]\(([^)]+)\)", text):
+                if target.startswith(("http://", "https://", "#")):
+                    continue
+                resolved = (path.parent / target).resolve()
+                self.assertTrue(resolved.exists(), f"Broken local link in {path}: {target}")
 
 
 if __name__ == "__main__":

@@ -89,6 +89,17 @@ instruction-mediated capture does not claim that protection.
 Identical user messages are still distinct interactions and receive distinct entries.
 Content equality by itself is never a reason to suppress an entry.
 
+Before appending, a writer MUST verify that existing structural entry headings are in
+strictly increasing physical order. A structural conflict is reported rather than
+silently compounded. The new entry MUST be appended at the physical end of the file; a
+writer MUST NOT insert it after a matched result, blank line, heading, or other repeated
+text. After writing the initial `In progress` entry and before requested project work, the
+writer MUST re-read the structure and verify that the new entry is the final structural
+entry and that physical order is still strictly increasing. If the initial write misplaced
+the new unfinished block, the writer may move only that newly created block to physical
+EOF without changing its contents, then MUST repeat the full verification. If the block's
+exact boundary is uncertain, the writer reports the conflict and does not modify history.
+
 ## Entry metadata
 
 An entry begins with these required fields in this order:
@@ -295,11 +306,11 @@ without transformation and compare source and destination byte count and SHA-256
 source path remains available.
 
 A pasted image is the temporary file materialized and exposed by Desktop. Preserve that
-file byte-for-byte and use this exact fidelity statement:
+file byte-for-byte and use this exact fidelity statement as one physical Markdown field
+line so its boundary is deterministic:
 
 ```text
-Byte-for-byte copy of the clipboard image materialized by Codex Desktop; binary identity
-with any pre-clipboard source is not claimed.
+Byte-for-byte copy of the clipboard image materialized by Codex Desktop; binary identity with any pre-clipboard source is not claimed.
 ```
 
 A pasted image can have different metadata, compression, or binary encoding from an

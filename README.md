@@ -56,20 +56,28 @@ they entered the clipboard.
 
 ## Project Status
 
-Milestone 1, the format and instruction contract, is complete. The repository now contains
-the canonical version 1 history specification, a copyable standard-capture `AGENTS.md`
-block, representative fixtures, automated contract checks, and a manual Codex Desktop
-validation checklist.
+Milestone 2, the standard-capture release candidate, is complete. The standard
+instructions were exercised from the first prompt in a clean disposable local Git project
+using Codex Desktop 26.908.70816 (9275) on macOS 26.6.2. The run covered complex text,
+follow-ups, two in-turn steering messages, correction, no-change work, attachments, image
+paste fidelity, filename collision handling, repository-local and unavailable artifacts,
+real Stop-button recovery, final structure, and practical Git behavior.
 
-The standard-capture release-candidate run in a fresh disposable Desktop project remains
-Milestone 2 work. The optional hook enhancement and version 1 release hardening follow it;
-hooks are not implemented or required by the current template.
+Post-run lifecycle checks then exercised the final enable/disable control and exposed an
+ambiguous physical append. The hardened EOF verification caught and repaired that exact
+failure mode in a second clean Desktop run before task work began.
+
+Standard capture remains instruction-mediated. It requires no hook, skill, plugin,
+background service, or network access, and it does not claim independent verification of
+agent-visible text. The optional hook enhancement remains Milestone 3 work; version 1
+release hardening remains Milestone 4 work.
 
 See:
 
 - [Canonical format](docs/PROMPT_SOURCE_FORMAT.md)
 - [Installable standard-capture instructions](templates/AGENTS.prompt-source-standard.md)
 - [Manual Codex Desktop validation checklist](docs/MANUAL_CODEX_DESKTOP_VALIDATION.md)
+- [Standard-capture release-candidate evidence](docs/CODEX_DESKTOP_STANDARD_CAPTURE_VALIDATION.md)
 - [Codex Desktop capture experiment](docs/CODEX_DESKTOP_CAPTURE_EXPERIMENT.md)
 - [Implementation roadmap](docs/ROADMAP.md)
 
@@ -77,11 +85,62 @@ The root [`AGENTS.md`](AGENTS.md) governs development of PromptSourceCode itself
 not the end-user capture template. To prepare an end-user project, include the dedicated
 template's contents in that project's root `AGENTS.md`.
 
-Run the deterministic Milestone 1 checks with:
+Run the deterministic contract checks with:
 
 ```text
 python3 -m unittest discover -s tests -v
 ```
+
+## Standard Capture Lifecycle
+
+### Install in a new or existing project
+
+1. Use a local Git repository opened as a project in Codex Desktop. Standard capture is
+   currently tested only in that environment.
+2. Copy the complete contents of
+   [`templates/AGENTS.prompt-source-standard.md`](templates/AGENTS.prompt-source-standard.md)
+   into the project-root `AGENTS.md`. In an existing file, append the block without
+   replacing unrelated project instructions. Keep the begin and end markers.
+3. Leave `- Capture: enabled` unchanged. Do not install a hook, skill, plugin, background
+   service, or network dependency for the standard path.
+4. Begin a new Codex Desktop task. The first submission initializes the root
+   `PROMPT_SOURCE.md` before requested project work. `prompt_source_assets/` appears only
+   when an artifact is preserved.
+
+The repository root [`AGENTS.md`](AGENTS.md) is development guidance for PromptSourceCode
+itself. Never copy it into an end-user project; use the dedicated template above.
+
+### Update the instruction block
+
+Replace everything from `<!-- prompt-source-standard-begin -->` through
+`<!-- prompt-source-standard-end -->`, inclusive, with the current template. Preserve all
+other project instructions. Updating the block does not rewrite or renumber existing
+`PROMPT_SOURCE.md` entries and does not recopy existing assets. If capture was disabled,
+restore `- Capture: disabled` after replacing the block unless the project owner also
+intends to re-enable it.
+
+### Disable or re-enable future capture
+
+Change only the template control line from `- Capture: enabled` to
+`- Capture: disabled`. Existing history and assets remain untouched, but later interactions
+are not added merely because the inactive block is present. The generated-history Git
+restriction remains active while capture is disabled. Re-enable future capture by changing
+`disabled` back to `enabled`; the next captured interaction continues after the greatest
+existing structural entry number.
+
+### Remove instructions or generated history
+
+To remove PromptSourceCode instructions, delete the marked standard-capture block from the
+project-root `AGENTS.md`. That stops future instruction-mediated capture but intentionally
+does not alter `PROMPT_SOURCE.md` or `prompt_source_assets/`.
+
+Already-generated history is ordinary local data. Keep both outputs to retain complete
+provenance, or, after disabling or removing the instructions, explicitly remove the root
+`PROMPT_SOURCE.md` and the entire root `prompt_source_assets/` directory together if the
+history is no longer wanted. Removing only the assets leaves broken history links. If the
+files were explicitly committed earlier, deleting working-tree copies does not erase them
+from Git history; repository-history rewriting is a separate, destructive operation and is
+outside the standard removal procedure.
 
 ## Generated History and Git
 
@@ -92,6 +151,10 @@ This restriction applies only to those generated provenance artifacts. It does n
 the tracked project's normal Git workflow: source code, tests, documentation, and other
 project files can be committed and pushed normally. PromptSourceCode can be used in both
 private and public repositories.
+
+This is an agent-behavior restriction, not an automatic `.gitignore` rule. Generated
+history normally remains visible as unstaged working-tree data so users can inspect it;
+manual Git commands remain the user's responsibility.
 
 ## License
 

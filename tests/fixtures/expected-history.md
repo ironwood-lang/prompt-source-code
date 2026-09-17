@@ -206,9 +206,18 @@ Use the attached image as a one-pixel fixture.
 - SHA-256: afab3cd49cf0a47b361ed2b78bd43febfa7fcfd0ab49fc065d5c36c505a4da98
 - Fidelity: Byte-for-byte copy of the attached original exposed by Codex Desktop.
 
+#### Artifact 2
+
+- Kind: Attached image
+- Original name (JSON): "Logo Final.PNG"
+- Preserved copy: [prompt-000007-Logo-Final-002.png](<prompt_source_assets/prompt-000007-Logo-Final-002.png>)
+- Byte count: 70
+- SHA-256: 3759a41b8b57aa59c46ce086048042297abed9ec54a540e85449a357a792ff20
+- Fidelity: Byte-for-byte copy of the attached original exposed by Codex Desktop.
+
 ### Result
 
-Recorded the attached original as a byte-preserved image fixture.
+Recorded two differently encoded attached originals without overwriting the sanitized-name collision.
 
 Changed files: None.
 

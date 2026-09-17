@@ -53,7 +53,7 @@ test has already occurred.
 
 ## Milestone 2: Standard Capture Release Candidate
 
-**Status:** Not started
+**Status:** Complete
 
 - Test the standard instructions in a clean disposable repository, separate from the
   PromptSourceCode repository, from its first prompt.
@@ -67,6 +67,22 @@ test has already occurred.
 
 **Exit criterion:** Standard capture works without a skill, plugin, hook, background service,
 or network access and its limitations are stated accurately.
+
+Completed on 2026-09-16 in a fresh disposable local Git project using Codex Desktop
+26.908.70816 (9275) on macOS 26.6.2. The run used the project-root standard template from
+its first prompt and exercised all listed interaction, artifact, recovery, structure, and
+Git cases. It used no PromptSourceCode hook, skill, plugin, background service, or network
+dependency. Evidence, hashes, limitations, and independent byte-level checks are recorded
+in
+[`CODEX_DESKTOP_STANDARD_CAPTURE_VALIDATION.md`](CODEX_DESKTOP_STANDARD_CAPTURE_VALIDATION.md).
+
+Release-candidate hardening added explicit installation/update boundaries, an enabled or
+disabled capture control, removal guidance, a same-entry collision check, and a
+single-physical-line pasted-image fidelity field. A post-run cross-task test also exposed
+ambiguous insertion after repeated result text; the contract now requires EOF-only append,
+physical-order verification, and bounded repair of only a newly misplaced unfinished
+block before task work. The optional hook enhancement remains Milestone 3 work; version 1
+release hardening and tagging remain Milestone 4 work.
 
 ## Milestone 3: Optional Hook Enhancement
 
