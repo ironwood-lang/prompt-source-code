@@ -19,7 +19,7 @@ PromptSourceCode helps you:
 - review a project's history in an ordinary readable file; and
 - keep that history local unless you explicitly decide to share it.
 
-PromptSourceCode 0.1.0 is designed for local projects used with Codex Desktop.
+PromptSourceCode 0.1.0 is designed for local projects used with Codex Desktop. Other coding agent harnesses will be supported soon.
 
 ## Install
 
