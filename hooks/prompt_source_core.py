@@ -77,7 +77,7 @@ OPTIONAL_PRESERVED_ARTIFACT_FIELDS = (
 # Frozen instruction pair for the standard path. Optional hook event handlers do
 # not consult this control: their enablement and trust remain separate.
 STANDARD_LOADER_SHA256 = "d64f51155fd5cba44370f9afd0300737f253b5db6244844dd8314af4fb6fd1ce"
-STANDARD_INSTRUCTIONS_SHA256 = "6ce534674aa8bc5e3c4b3966e2a28791721210d648fc68a54e077b3084bf2a01"
+STANDARD_INSTRUCTIONS_SHA256 = "bd5740bde0afc6c4e60d5cdcccbd57b1872498771c885f1966588e28189ca4df"
 
 
 class PromptSourceError(Exception):
@@ -1309,6 +1309,50 @@ def preserve_artifact(root: Path, request: dict[str, Any]) -> Entry | None:
         return next(item for item in candidates if item.number == entry.number)
 
 
+def _relative_link(path: str) -> str:
+    """Encode a literal repository path without interpreting Markdown or URLs."""
+    encoded = "".join(chr(b) if chr(b) in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~/"
+                      else f"%{b:02X}" for b in path.encode("utf-8"))
+    return f"[{encoded}](<{encoded}>)"
+
+
+def _standard_result(request: dict[str, Any]) -> str:
+    """Render the changed-file report from data, never from model-authored Markdown."""
+    summary = _required_string(request, "result")
+    outside, balanced = _outside_fence_lines(summary)
+    if not summary.strip() or not balanced:
+        raise InvalidEvent("result must be a nonempty summary with balanced fences")
+    if any(re.match(r"^(?:## Entry |### (?:User input|Codex Desktop runtime context|Artifacts|Result)(?:\s|$)|#### Artifact )", line)
+           for _, line in outside):
+        raise InvalidEvent("result cannot contain capture sections; use --preserve-artifact for artifacts")
+    if any(re.search(r"\bchanged\s+files\b", line, re.IGNORECASE) for _, line in outside):
+        raise InvalidEvent("result is summary only; supply changed_files separately (use [] for none)")
+    paths = request.get("changed_files")
+    if not isinstance(paths, list):
+        raise InvalidEvent("changed_files must be a list of repository-relative task-work paths (use [] for none)")
+    explicit = request.get("provenance_changes_requested", False)
+    if not isinstance(explicit, bool):
+        raise InvalidEvent("provenance_changes_requested must be a boolean; true only for explicit user-requested edits")
+    changed = []
+    for value in paths:
+        if (not isinstance(value, str) or not value or value.startswith(("/", "~"))
+                or "\\" in value or re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", value)
+                or any(ord(c) < 32 or ord(c) == 127 for c in value)):
+            raise InvalidEvent("changed_files paths must be literal repository-relative paths, not Markdown or URLs")
+        _utf8_bytes(value, "changed_files path")
+        path = Path(value)
+        if not path.parts or ".." in path.parts:
+            raise InvalidEvent("changed_files paths cannot be the root or contain parent traversal")
+        relative = path.as_posix()
+        provenance = relative == HISTORY_NAME or path.parts[0] == "prompt_source_assets"
+        if (provenance and not explicit) or relative in changed:
+            continue
+        changed.append(relative)
+    files = "Changed files: None." if not changed else "Changed files:\n\n" + "\n".join(
+        "- " + _relative_link(path) for path in changed)
+    return summary.rstrip("\r\n") + "\n\n" + files + "\n"
+
+
 def finish_standard(root: Path, request: dict[str, Any]) -> Entry | None:
     """Complete only the named unfinished standard entry, retaining its input bytes."""
     root = _validated_root(root)
@@ -1318,11 +1362,6 @@ def finish_standard(root: Path, request: dict[str, Any]) -> Entry | None:
         number = request.get("entry_number")
         if isinstance(number, bool) or not isinstance(number, int) or number < 1:
             raise InvalidEvent("entry_number must be a positive integer")
-        result = _required_string(request, "result")
-        outside, _ = _outside_fence_lines(result)
-        if any(re.match(r"^(?:## Entry |### (?:User input|Codex Desktop runtime context|Artifacts|Result)(?:\s|$)|#### Artifact )", line)
-               for _, line in outside):
-            raise InvalidEvent("result cannot contain capture sections; use --preserve-artifact for artifacts")
         history, entries = _read_history(root / HISTORY_NAME)
         entry = next((item for item in entries if item.number == number), None)
         if entry is None or entry.fields["Capture method"] != "Instruction-mediated":
@@ -1333,8 +1372,9 @@ def finish_standard(root: Path, request: dict[str, Any]) -> Entry | None:
         if session is not None and session != _json_field(os.environ.get("CODEX_THREAD_ID", "")):
             raise NoReliableMatch("entry belongs to a different runtime task")
         _require_desktop_artifact_context(entry.text)
+        result = _standard_result(request)
         block = entry.text.replace("- Status: In progress\n", "- Status: Completed\n", 1)
-        block += "\n### Result\n\n" + result + ("" if result.endswith("\n") else "\n")
+        block += "\n### Result\n\n" + result
         updated = history[: entry.start] + block + history[entry.end :]
         candidates = validate_history(updated)
         if [item.number for item in candidates] != [item.number for item in entries]:

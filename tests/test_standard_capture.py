@@ -50,7 +50,7 @@ class StandardCaptureTests(unittest.TestCase):
         before = self.snapshot()
         self.assertFalse(core.standard_capture_state(self.root))
         self.assertIsNone(self.begin("must not be recorded", first=False))
-        self.assertIsNone(core.finish_standard(self.root, {"entry_number": first.number, "result": "Changed files: None."}))
+        self.assertIsNone(core.finish_standard(self.root, {"entry_number": first.number, "result": "Finished.", "changed_files": []}))
         self.assertEqual(self.snapshot(), before)
         path = self.root / "AGENTS.md"
         path.write_bytes(path.read_bytes().replace(b"- Capture: disabled", b"- Capture: enabled"))
@@ -69,7 +69,7 @@ class StandardCaptureTests(unittest.TestCase):
 
     def test_each_new_task_starts_initial_even_with_existing_history(self):
         first = self.begin()
-        core.finish_standard(self.root, {"entry_number": first.number, "result": "Changed files: None."})
+        core.finish_standard(self.root, {"entry_number": first.number, "result": "Finished.", "changed_files": []})
         original = (self.root / core.HISTORY_NAME).read_bytes()
         with patch.dict(os.environ, {"CODEX_THREAD_ID": "fixture-nested-task"}):
             # Reproduce the bad classification; the runtime guard rejects it.
@@ -113,7 +113,7 @@ class StandardCaptureTests(unittest.TestCase):
         self.assertEqual([e.number for e in core.validate_history_file(self.root)], [1, 2, 3])
         self.assertEqual(third.fields["Supersedes"], "Entry 000002")
         done = core.finish_standard(self.root, {"entry_number": first.number,
-                                               "result": "Superseded before work.\n\nChanged files: None."})
+                                               "result": "Superseded before work.", "changed_files": []})
         self.assertEqual(done.prompt, first.prompt)
         before = self.snapshot()
         with self.assertRaises(core.HistoryConflict):
@@ -177,7 +177,7 @@ class StandardCaptureTests(unittest.TestCase):
     def test_failed_or_foreign_completion_preserves_history(self):
         entry = self.begin()
         before = self.snapshot()
-        request = {"entry_number": entry.number, "result": "Changed files: None."}
+        request = {"entry_number": entry.number, "result": "Finished.", "changed_files": []}
         with patch.dict(os.environ, {"CODEX_THREAD_ID": "fixture-other-task"}):
             with self.assertRaises(core.NoReliableMatch):
                 core.finish_standard(self.root, request)
@@ -229,7 +229,7 @@ class StandardCaptureTests(unittest.TestCase):
         command = 'cd "$(git rev-parse --show-toplevel)" && /usr/bin/python3 .prompt-source/validate.py '
         for mode, payload in (("--capture-state", None),
                               ("--begin-standard", {"prompt": "nested", "first_in_task": True}),
-                              ("--finish-standard", {"entry_number": 1, "result": "Changed files: None."}),
+                              ("--finish-standard", {"entry_number": 1, "result": "Finished.", "changed_files": []}),
                               ("--validate-history", None)):
             result = subprocess.run(command + mode, shell=True, executable="/bin/sh", cwd=nested,
                                     input=json.dumps(payload) if payload else None,

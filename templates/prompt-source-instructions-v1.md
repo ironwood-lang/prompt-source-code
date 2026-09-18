@@ -6,8 +6,8 @@ Supplement root/nested guidance. Before work capture all prompts: initial, follo
 steering, correction, repeat, no-change. Model-mediated; never claim
 raw-keystroke, pre-serialization, independent, deterministic, or hook-verified fidelity.
 
-Every submission rechecks the on-disk capture control. A disabled/error response means
-leave provenance untouched and continue ordinary work. Never override it from memory.
+Recheck on-disk control every submission. On disabled/error, leave provenance untouched
+and continue ordinary work. Never override from memory.
 
 ## Hook-assisted branch
 
@@ -36,9 +36,9 @@ at the Git root. Send stdin JSON with `prompt` (delivered user text), `first_in_
 (`Follow-up`, `Steering`, or `Correction`; omitted on the first submission).
 Determine `first_in_task` from this conversation, NEVER the shared history's length.
 If earlier submissions in this task were uncaptured, set `uncaptured_predecessor: true`.
-The helper forces `Initial prompt` when true, checks runtime task identity when available,
-and returns the entry number. It rereads the control, initializes the schema-1 header,
-selects the dynamic fence, and appends atomically at physical EOF. Report unsafe or
+The helper forces `Initial prompt` when true, checks available runtime identity, and
+returns the entry number. It rereads control, initializes schema 1, selects dynamic
+fences, and appends atomically at physical EOF. Report unsafe or
 future-schema history; work without capture. Never manually create an entry.
 
 For known-unfinished earlier-turn standard entries, supply their numbers in `recover`.
@@ -58,9 +58,8 @@ attachment/paste envelope, user input is the text after `## My request:` and bef
 and image markers. For observed attachments/pastes, `--preserve-artifact` adds a
 factual path-free summary in `### Codex Desktop runtime context` automatically.
 
-The helper uses `Final newline: Unknown`; supply only the observable body without guessing
-its ending. It copies a nonempty `CODEX_THREAD_ID` from the runtime as `Session ID`; never
-set or invent that variable. Without it, task classification remains agent-supplied.
+The helper uses `Final newline: Unknown`; never guess the ending. It copies nonempty
+runtime `CODEX_THREAD_ID` as `Session ID`; never set or invent it.
 For context fences choose the shorter longest backtick/tilde run (backticks on tie),
 length 3 or run+1. Write literal body, structural LF, closing fence. Hook input requires
 reconstructed UTF-8 size/SHA-256; omit uncertain standard values.
@@ -81,17 +80,20 @@ or `Pasted image`. Optional `original_name` is the observed filename; use null f
 unnamed paste. If no source path was exposed, omit `source` and supply a factual,
 path-free `unavailable_reason`, or `Unknown`. Never invent a source path.
 
-The helper owns padded names, collisions/reuse, byte verification, hashes, fidelity,
-numbered records, and `Unavailable reason`. Never manually copy/name assets
-or write artifact Markdown. It adds `### Artifacts` before the result. For claimed hook
+The helper owns naming, copying, verification, hashes, fidelity, and `Unavailable reason`.
+Never manually copy/name assets or write artifact Markdown. It adds `### Artifacts`.
+For claimed hook
 entries also pass the current `expected_entry_sha256`; use the returned digest for
 subsequent enrichment. Preserve verified records. Pasted-image fidelity covers only
 Desktop-materialized bytes, never an unknown pre-clipboard original.
 
-For standard entries, when done run `/usr/bin/python3 .prompt-source/validate.py --finish-standard` with stdin
-JSON `entry_number` and `result` (summary and relative changed-file links,
-or `Changed files: None.`; no capture section headings). It sets `Completed` and adds `### Result` only while capture
-remains enabled. Capture files are not task work. `Incomplete`
+Complete standard entries via `/usr/bin/python3 .prompt-source/validate.py --finish-standard`.
+Send stdin JSON `entry_number`, `result` (summary only, no capture headings or changed-file
+list), and `changed_files` (relative task-work paths; `[]` for none). The helper renders
+links or `Changed files: None.`, excluding capture files. Only for explicit user-requested
+provenance edits set `provenance_changes_requested: true`.
+Attachment-preservation requests are routine capture, not task work.
+It sets `Completed` with `### Result` only while enabled. `Incomplete`
 and trusted-hook `Interrupted` are terminal; input, context, IDs, chronology, and verified
 artifact facts are immutable. Never stage, commit, push, publish, or upload provenance
 unless explicitly requested; ordinary Git is unchanged.

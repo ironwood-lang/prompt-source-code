@@ -603,6 +603,25 @@ def prompt_matches(entry: core.Entry, delivered: str) -> bool:
     return False
 
 
+def reports_no_task_changes(entry: core.Entry) -> bool:
+    """Require a real no-change report, not a quoted phrase or a contradictory list."""
+    outside, _ = core._outside_fence_lines(entry.text)
+    start = next((offset for offset, line in outside if line.rstrip("\r\n") == "### Result"), None)
+    if start is None:
+        return False
+    lines = []
+    for offset, line in outside:
+        if offset <= start:
+            continue
+        if line.startswith("### "):
+            break
+        if not re.match(r"^(`{3,}|~{3,})", line):
+            lines.append(line)
+    result = "".join(lines)
+    reports = list(re.finditer(r"\bchanged\s+files\b", result, re.IGNORECASE))
+    return len(reports) == 1 and result[reports[0].start():].strip() == "Changed files: None."
+
+
 def validate(
     project: Path,
     manifest_path: Path,
@@ -752,10 +771,10 @@ def validate(
             f"{case['id']} does not supersede {target_id}",
         )
 
-    for identifier in ("S02", "H02", "H03A", "H03B"):
+    for identifier in ("S02", "S06", "S07", "S08", "S09", "H02", "H03A", "H03B", "H08"):
         if identifier in case_entries:
             check(
-                "Changed files: None." in case_entries[identifier].text,
+                reports_no_task_changes(case_entries[identifier]),
                 f"{identifier} does not record its no-change result",
             )
     if "S10" in case_entries:

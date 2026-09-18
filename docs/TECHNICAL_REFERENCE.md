@@ -132,6 +132,22 @@ results; the summary is not independent verification or a verbatim envelope.
 complete attachment/paste entries with missing or empty context. These are writer
 safeguards, not retroactive changes to historical entries.
 
+Completion takes stdin JSON with `entry_number`, `result` (factual summary only), and
+`changed_files` (an array of literal repository-relative task-work paths; `[]` for none).
+The helper renders the changed-file report, deduplicates paths, safely encodes Markdown
+links, and excludes root `PROMPT_SOURCE.md` and `prompt_source_assets/` paths by default.
+An empty retained list produces `Changed files: None.`. A missing list is an error, not
+an assumption that no work happened. Old free-form changed-file reports are rejected
+before any write; the agent must resubmit a summary and structured paths.
+
+Only when the user explicitly requests task-work edits to provenance may the agent add
+`provenance_changes_requested: true`; this allows those paths in the report but grants
+no Git/publication authority. Artifact preservation by the capture mechanism is not such
+a request. The helper does not run Git or infer changes from filesystem state, so deleted
+paths can be reported too. Factual summaries and the actual task-work path selection
+remain model-supplied. Update instructions and helper together using the documented
+installer; historical schema-1 results remain readable and are never reformatted.
+
 History validation checks canonical padded asset prefixes and verifies each recorded
 copy's size and digest. It cannot reconstruct an omitted original source or independently
 prove whether a model supplied the correct Desktop attachment kind. The standard path

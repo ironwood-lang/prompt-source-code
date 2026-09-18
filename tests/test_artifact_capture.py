@@ -54,7 +54,7 @@ class ArtifactCaptureTests(unittest.TestCase):
         return core._validate_artifacts((entry or core.validate_history_file(self.root)[0]).text)
 
     def test_exact_preflight_four_sources_have_padded_names_and_requested_kind(self):
-        core.finish_standard(self.root, {"entry_number": 1, "result": "Changed files: None."})
+        core.finish_standard(self.root, {"entry_number": 1, "result": "Finished.", "changed_files": []})
         original = self.history()
         self.entry = core.begin_standard(self.root, {"prompt": "P02", "first_in_task": False})
         fixtures = [("notes.txt", b"notes\n"), ("binary.dat", bytes(range(256)) * 4),
@@ -62,7 +62,7 @@ class ArtifactCaptureTests(unittest.TestCase):
                     ("collision-b/Résumé Final ??.PNG", b"image B")]
         for name, payload in fixtures:
             self.preserve(self.source("inputs/artifacts/" + name, payload))
-        entry = core.finish_standard(self.root, {"entry_number": 2, "result": "Changed files: None."})
+        entry = core.finish_standard(self.root, {"entry_number": 2, "result": "Finished.", "changed_files": []})
         records = self.records(entry)
         self.assertEqual([r["Kind"] for r in records], ["Requested artifact"] * 4)
         self.assertEqual(self.assets(), dict(zip(
@@ -121,7 +121,7 @@ class ArtifactCaptureTests(unittest.TestCase):
         for record in records[2:]:
             self.assertEqual(record["Fidelity"], core.PASTED_IMAGE_FIDELITY)
         self.assertIn("- Fidelity: " + core.PASTED_IMAGE_FIDELITY, self.history().decode().splitlines())
-        entry = core.finish_standard(self.root, {"entry_number": 1, "result": "Changed files: None."})
+        entry = core.finish_standard(self.root, {"entry_number": 1, "result": "Finished.", "changed_files": []})
         self.assertEqual(core.desktop_runtime_context(entry.text), (core.DESKTOP_ARTIFACT_CONTEXT, "None"))
         self.assertEqual(entry.text.count(core.RUNTIME_CONTEXT_HEADING), 1)
         self.assertNotIn(str(source), entry.text)
@@ -135,7 +135,7 @@ class ArtifactCaptureTests(unittest.TestCase):
             entry = self.preserve(self.source("inputs/" + name, payload), kind=kind)
             self.assertEqual(core.desktop_runtime_context(entry.text), (core.DESKTOP_ARTIFACT_CONTEXT, "None"))
             self.assertEqual(entry.text.count(core.RUNTIME_CONTEXT_HEADING), 1)
-        done = core.finish_standard(self.root, {"entry_number": 1, "result": "Changed files: None."})
+        done = core.finish_standard(self.root, {"entry_number": 1, "result": "Finished.", "changed_files": []})
         self.assertEqual(done.prompt, self.entry.prompt)
         self.assertEqual([r["Kind"] for r in self.records()], [f[2] for f in fixtures])
         self.assertEqual(set(self.assets().values()), {f[1] for f in fixtures})
@@ -150,7 +150,7 @@ class ArtifactCaptureTests(unittest.TestCase):
         self.assertEqual(self.records(attached)[:1], original_records)
         self.assertLess(attached.text.index(core.RUNTIME_CONTEXT_HEADING), attached.text.index("### Artifacts"))
         self.preserve(self.source("project/local.txt"))
-        done = core.finish_standard(self.root, {"entry_number": 1, "result": "Changed files: None."})
+        done = core.finish_standard(self.root, {"entry_number": 1, "result": "Finished.", "changed_files": []})
         self.assertEqual(core.desktop_runtime_context(done.text), core.desktop_runtime_context(attached.text))
 
     def test_existing_literal_context_and_dynamic_fences_are_preserved(self):
@@ -166,7 +166,7 @@ class ArtifactCaptureTests(unittest.TestCase):
 
     def test_fenced_fake_context_does_not_satisfy_capture_or_completion(self):
         prompt = "### Codex Desktop runtime context\n\n```text\nnot runtime context\n```"
-        core.finish_standard(self.root, {"entry_number": 1, "result": "Changed files: None."})
+        core.finish_standard(self.root, {"entry_number": 1, "result": "Finished.", "changed_files": []})
         previous = self.history()
         self.entry = core.begin_standard(self.root, {"prompt": prompt, "first_in_task": False})
         self.assertIsNone(core.desktop_runtime_context(self.entry.text))
@@ -185,7 +185,7 @@ class ArtifactCaptureTests(unittest.TestCase):
             (self.root / core.HISTORY_NAME).write_bytes(bad)
             core.validate_history_file(self.root)  # Schema-1 reader stays backward compatible.
             with self.assertRaisesRegex(core.HistoryConflict, "runtime context"):
-                core.finish_standard(self.root, {"entry_number": 1, "result": "Changed files: None."})
+                core.finish_standard(self.root, {"entry_number": 1, "result": "Finished.", "changed_files": []})
             self.assertEqual(self.history(), bad)
 
     def test_malformed_existing_context_is_rejected_before_copying(self):
@@ -210,7 +210,7 @@ class ArtifactCaptureTests(unittest.TestCase):
 
     def test_direct_flat_asset_reused_across_entries_without_renaming_history(self):
         self.preserve(self.source())
-        core.finish_standard(self.root, {"entry_number": 1, "result": "Changed files: None."})
+        core.finish_standard(self.root, {"entry_number": 1, "result": "Finished.", "changed_files": []})
         before, assets = self.history(), self.assets()
         self.entry = core.begin_standard(self.root, {"prompt": "reuse", "first_in_task": False})
         record = self.records(self.preserve(self.root / "prompt_source_assets/prompt-000001-notes.txt"))[0]
@@ -259,7 +259,7 @@ class ArtifactCaptureTests(unittest.TestCase):
             self.preserve(source)
         agents.write_bytes(enabled)
         self.assertEqual(self.history(), before)
-        core.finish_standard(self.root, {"entry_number": 1, "result": "Changed files: None."})
+        core.finish_standard(self.root, {"entry_number": 1, "result": "Finished.", "changed_files": []})
         with self.assertRaises(core.HistoryConflict):
             self.preserve(source)
         self.assertFalse((self.root / "prompt_source_assets").exists())
@@ -350,9 +350,9 @@ class ArtifactCaptureTests(unittest.TestCase):
         before = self.history()
         for result in ("Summary\n\n### Artifacts\n", "### User input\n", "### Codex Desktop runtime context\n", "## Entry 000002\n"):
             with self.assertRaises(core.InvalidEvent):
-                core.finish_standard(self.root, {"entry_number": 1, "result": result})
+                core.finish_standard(self.root, {"entry_number": 1, "result": result, "changed_files": []})
             self.assertEqual(self.history(), before)
-        core.finish_standard(self.root, {"entry_number": 1, "result": "Example:\n\n```text\n### Artifacts\n```\n\nChanged files: None."})
+        core.finish_standard(self.root, {"entry_number": 1, "result": "Example:\n\n```text\n### Artifacts\n```", "changed_files": []})
 
     def test_claimed_hook_enrichment_uses_digest_and_keeps_verified_facts_immutable(self):
         block = core.render_entry(1, interaction="Initial prompt", session_id="artifact-task", turn_id="turn",

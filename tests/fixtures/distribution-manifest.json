@@ -7,8 +7,8 @@
       "sha256": "96a1d1923b7b6a4e4a0ec8b3df888fe3ab9a5f52c7b492bcd1063f06bb784f23"
     },
     "templates/prompt-source-instructions-v1.md": {
-      "byte_count": 6114,
-      "sha256": "6ce534674aa8bc5e3c4b3966e2a28791721210d648fc68a54e077b3084bf2a01"
+      "byte_count": 6085,
+      "sha256": "bd5740bde0afc6c4e60d5cdcccbd57b1872498771c885f1966588e28189ca4df"
     },
     "scripts/instruction_contract.py": {
       "byte_count": 9972,
@@ -19,8 +19,8 @@
       "sha256": "71510d7c161f64af96415e66eb892d5fd6960bebd046e41bd48c77bea1e6f762"
     },
     "hooks/prompt_source_core.py": {
-      "byte_count": 66909,
-      "sha256": "f105c4cf6cda471b89b3e26c0a52a364bddadcef9c11c0017d7f82a196f83b6f"
+      "byte_count": 69198,
+      "sha256": "c9aeb2911869e06cb703b4799e15c695517fedfeddc2e4e553c5858eab5b6127"
     },
     "hooks/prompt_source_hook.py": {
       "byte_count": 194,

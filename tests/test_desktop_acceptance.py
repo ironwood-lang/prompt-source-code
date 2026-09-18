@@ -178,6 +178,49 @@ class DesktopAcceptanceToolTests(unittest.TestCase):
                 self.assertTrue(actual[0].startswith("- S06"), actual)
                 self.assertTrue(actual[1].startswith("- S08"), actual)
 
+    def test_s06_s08_result_reporting_defect_is_not_hidden_by_valid_artifacts(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            with contextlib.redirect_stdout(io.StringIO()):
+                project, manifest, export = self.make_run(Path(temporary) / "run")
+            path = project / "PROMPT_SOURCE.md"
+            original = path.read_text()
+            for replacement in (
+                "Changed files: [PROMPT_SOURCE.md](PROMPT_SOURCE.md).",
+                "```text\nChanged files: None.\n```",
+                "Changed files: None.\n\nChanged files: [PROMPT_SOURCE.md](PROMPT_SOURCE.md).",
+            ):
+                changed = original
+                for entry in reversed(acceptance.core.validate_history(original)):
+                    if any(f"PSC acceptance {case}." in entry.prompt for case in ("S06", "S08")):
+                        block = entry.text.replace("Changed files: None.", replacement)
+                        changed = changed[:entry.start] + block + changed[entry.end:]
+                path.write_text(changed)
+                errors = io.StringIO()
+                with self.subTest(replacement=replacement), contextlib.redirect_stderr(errors), self.assertRaises(SystemExit):
+                    acceptance.validate(project, manifest, acceptance.CANONICAL_INSTRUCTIONS,
+                                        standard_only=True, desktop_export=export)
+                self.assertEqual(errors.getvalue().splitlines()[1:], [
+                    "- S06 does not record its no-change result",
+                    "- S08 does not record its no-change result",
+                ])
+            path.write_text(original)
+            with contextlib.redirect_stdout(io.StringIO()):
+                acceptance.validate(project, manifest, acceptance.CANONICAL_INSTRUCTIONS,
+                                    standard_only=True, desktop_export=export)
+
+    def test_no_change_check_accepts_inline_history_but_not_quoted_or_conflicting_reports(self):
+        for body, expected in (
+            ("Summary. Changed files: None.\n", True),
+            ("Summary.\n\nChanged files: None.\n", True),
+            ("Summary.\n\nChanged files: None.\n\n```text\nLiteral example.\n```\n", True),
+            ("```text\nChanged files: None.\n```\n", False),
+            ("Changed files: [a](a). Changed files: None.\n", False),
+            ("Changed files: None.\n- [a](a)\n", False),
+        ):
+            entry = acceptance.core.Entry(1, 0, 0, "### Result\n\n" + body, {}, "", "Unknown")
+            with self.subTest(body=body):
+                self.assertEqual(acceptance.reports_no_task_changes(entry), expected)
+
     def test_delivery_comparison_never_normalizes_internal_whitespace(self):
         prompt = "a  b\t\n\n## heading\n"
         entry = acceptance.core.Entry(1, 0, 0, "", {}, prompt[:-1], "Unknown")

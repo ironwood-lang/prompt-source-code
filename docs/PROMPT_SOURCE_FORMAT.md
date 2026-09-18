@@ -517,6 +517,15 @@ routine captured copies under `prompt_source_assets/` are provenance operations 
 not listed as task-work changes. If the user's requested work directly modifies those
 paths, list them normally.
 
+The standard completion writer takes a summary-only `result` and a required
+`changed_files` array of repository-relative paths. It creates the report and links;
+agents do not compose them in `result`. Routine root history/asset paths are filtered
+out. Explicit user-requested task-work edits to those paths require the boolean
+`provenance_changes_requested: true`. This reporting exception does not authorize
+staging or publishing provenance. These are writer safeguards, not a schema migration
+or a reason to rewrite historical results. See the
+[completion helper contract](TECHNICAL_REFERENCE.md#standard-capture-lifecycle).
+
 An incomplete or interrupted entry may have a result containing only known partial work.
 An `In progress` entry has no result yet.
 
