@@ -8,6 +8,16 @@ they never replace the standard path.
 The root [`AGENTS.md`](../AGENTS.md) in this repository is development guidance. Never copy
 it into another project.
 
+These instructions apply to **PromptSourceCode 0.2.0**. Download **Source code (zip)**
+from the [0.2.0 release](https://github.com/ironwood-lang/prompt-source-code/releases/tag/v0.2.0),
+unzip it, and open Terminal in the extracted `prompt-source-code-0.2.0` folder. Use an
+existing local Git project as the destination, not the extracted PromptSourceCode folder.
+Paths containing spaces must be quoted.
+
+The supported capture environment is Codex Desktop on macOS. Both standard and optional
+capture require `/usr/bin/python3` (tested with 3.9.6) and its standard library; Git is
+required for root discovery. No `pip` package or global Codex configuration is needed.
+
 ## Canonical standard layout
 
 The installed files are:
@@ -33,7 +43,8 @@ No user-specific Codex configuration or fallback filename is part of this layout
 From an unpacked PromptSourceCode checkout or release, run:
 
 ```text
-python3 scripts/instruction_contract.py install /path/to/project
+/usr/bin/python3 scripts/instruction_contract.py install "/path/to/project"
+/usr/bin/python3 scripts/instruction_contract.py check "/path/to/project"
 ```
 
 The standard-library installer:
@@ -94,10 +105,26 @@ copying and metadata assembly; no extra installation step or enabled hook is nee
 
 ## 3. Update the loader and dedicated instructions
 
+Finish active Desktop work first. If optional hooks are installed, disable both through
+CLI `/hooks` and fully restart Desktop before replacing capture files.
+
+**From the 0.1.0 full-inline template:** preserve a backup of your root `AGENTS.md` outside
+the project. In your editor remove only the complete old block from
+`<!-- prompt-source-standard-begin -->` through `<!-- prompt-source-standard-end -->`,
+including both markers. Keep all surrounding project instructions and every nested
+`AGENTS.md` unchanged. If either marker is missing or duplicated, stop and inspect it;
+do not guess which project instructions belong to PromptSourceCode. The installer does
+not remove this old block automatically. Then run the `install` and `check` commands
+above. Leaving the old block alongside the new loader creates conflicting capture rules.
+
+**From an existing compact-loader installation:** use `update` below. Do not remove
+the loader manually or copy the development repository's `AGENTS.md` into your project.
+
 From the new reviewed PromptSourceCode checkout, run:
 
 ```text
-python3 scripts/instruction_contract.py update /path/to/project
+/usr/bin/python3 scripts/instruction_contract.py update "/path/to/project"
+/usr/bin/python3 scripts/instruction_contract.py check "/path/to/project"
 ```
 
 The update replaces only the bounded loader, canonical dedicated file, and project-local
@@ -109,6 +136,12 @@ If capture was disabled, the canonical update restores `Capture: enabled`; chang
 single control back to `disabled` before the next Desktop task unless re-enabling was
 intentional. Run `python3 scripts/instruction_contract.py check /path/to/project` to verify
 markers, path, version, validator identity, and enforced instruction budgets.
+
+In both paths, leave `PROMPT_SOURCE.md` and `prompt_source_assets/` in place. Review the
+three installed files and start a new Desktop task so it receives the new instructions.
+Optional hooks are a separate update: follow [their update procedure](OPTIONAL_HOOKS.md#disable-update-re-enable-or-remove)
+before enabling and trusting them again. Updating standard capture alone does not update
+the files under `.codex/hooks/`.
 
 ## 4. Disable and re-enable standard capture
 

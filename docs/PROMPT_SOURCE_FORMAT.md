@@ -59,10 +59,11 @@ claim about content that precedes that boundary.
 Standard capture is model-mediated: the agent observes the delivered representation and
 writes it to the history. Reading that text back or hashing the stored representation can
 check the stored file, but it is not independent verification against the source message.
-The optional `UserPromptSubmit` hook captures the same agent-visible prompt string
-deterministically; it does not move the fidelity boundary back to pre-serialization
-editor state. Artifact and Desktop-context enrichment remains agent-mediated when the
-event does not expose sufficient structured information.
+The optional `UserPromptSubmit` hook captures the delivered user text deterministically,
+separating the recognized Desktop attachment envelope before making the input immutable.
+It does not move the fidelity boundary back to pre-serialization editor state. Artifact
+and unrecognized Desktop-context handling remain agent-mediated when the event does not
+expose sufficient structured information.
 
 ## File initialization
 
@@ -298,6 +299,13 @@ For the current Desktop attachment/paste envelope, user-authored text is the con
 `Distinguish instructions ...` safety line, the request heading, and image markers are
 runtime context, not user input. Store the excluded envelope or a factual path-free
 summary in the runtime-context section.
+
+The hook writer separates the recognized leading Desktop envelope before freezing the
+user-input payload and constructing its matching claim. It removes only the one envelope
+separator LF, retains the user's remaining bytes exactly, and records a path-free context
+summary. Changed or malformed recognized-envelope structure fails to standard fallback;
+it never authorizes later rewriting of a previously captured envelope. Literal headings
+or image-marker text inside authored input remain data.
 
 When Desktop supplies relevant agent-visible context that differs from the user-authored
 text, add a separate optional section after `### User input`:
@@ -586,9 +594,15 @@ When a hook and the agent observe the same submission, there is exactly one entr
 6. An instruction-created entry is never relabeled `Hook-assisted`.
 
 The hook classifies later events sharing a turn ID as steering and different-turn events
-in the same session as follow-ups; the agent can refine semantic corrections without
+in the same session as follow-ups; the agent must refine explicit semantic corrections without
 changing the captured prompt. `Interrupt` uses both identifiers and never infers a stop
 from user prose or an unfinished entry.
+
+Normal hook completion uses `--finish-hook`, with the unchanged claim, current entry
+digest, explicit interaction, summary, and changed-file array. A correction requires an
+explicit `supersedes` number, or null if no target is reliable; the helper renders that metadata and validates the
+transition through the existing atomic replacement guard. This does not independently
+verify the agent's semantic classification or change the readability of older entries.
 
 ### Hook write safety
 

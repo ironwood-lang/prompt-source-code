@@ -175,7 +175,16 @@ deterministic tests and 80 repeated concurrency/failure-injection invocations.
 
 ## Milestone 6: Dedicated Capture Instruction File
 
-**Status:** In progress
+**Status:** Complete — owner-approved combined-evidence signoff, 2026-09-18
+
+The [FULL_01 standard checkpoint](MILESTONE_6_FULL_01_STANDARD_20260918.md) passed;
+the [full hook-phase audit](MILESTONE_6_FULL_01_HOOKS_20260918.md) failed H07 and H08.
+The [focused H07/H08 retest passed](MILESTONE_6_H07_H08_VALIDATION_20260918.md) on the
+repaired snapshot. The owner then declined further manual tests and authorized 0.2.0
+publication using the combined evidence. The [signoff record](MILESTONE_6_SIGNOFF_20260918.md)
+documents this explicit exception to the original single-full-run gate, the change-impact
+review, and the remaining evidence boundary. The failed historical full run is preserved;
+no all-green full run on the repaired candidate is claimed.
 
 - Treat the 0.1.0 instruction footprint as a release-blocking usability and compatibility
   concern for this milestone. The baseline template is 358 lines, 2,591 words, and 18,250
@@ -211,8 +220,9 @@ deterministic tests and 80 repeated concurrency/failure-injection invocations.
   default Codex configuration. Record before-and-after line, word, and byte counts.
 - Execute the complete developer-run
   [`MILESTONE_6_CODEX_DESKTOP_ACCEPTANCE.md`](MILESTONE_6_CODEX_DESKTOP_ACCEPTANCE.md)
-  script in a fresh project and pass its deterministic validator before recommending the
-  new layout in the README.
+  script in a fresh project. For this milestone, the owner approved its passing-case
+  evidence together with the focused repair retest and automated regression checks as
+  the release gate, replacing the original requirement for one full-validator pass.
 
 **Exit criterion:** A new user can keep only a small PromptSourceCode loader block in the
 project-root `AGENTS.md`, keep the complete capture instructions in the documented

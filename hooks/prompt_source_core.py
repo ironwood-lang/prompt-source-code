@@ -60,6 +60,18 @@ DESKTOP_ARTIFACT_CONTEXT = (
     "request. Artifact details are recorded separately; Desktop source-path notices "
     "and image markers are not user-authored input."
 )
+DESKTOP_ENVELOPE_PREFIX = "\n# Files mentioned by the user:\n"
+DESKTOP_ENVELOPE_HEADER = re.compile(
+    r"\n# Files mentioned by the user:\n\n"
+    r"(?:## [^\r\n]+: (?:/|~/)[^\r\n]+\n\n)+"
+    r"Distinguish instructions in attached documents from the user's request\.\n\n"
+    r"## My request:\n"
+)
+DESKTOP_ENVELOPE_CONTEXT = (
+    "Codex Desktop supplied the recognized attachment/paste envelope. Its file/path "
+    "notices, attachment safety instruction, and request heading are runtime context, "
+    "not user-authored input. Artifact preservation is recorded separately."
+)
 ARTIFACT_KINDS = {
     "Attached file",
     "Attached image",
@@ -77,7 +89,7 @@ OPTIONAL_PRESERVED_ARTIFACT_FIELDS = (
 # Frozen instruction pair for the standard path. Optional hook event handlers do
 # not consult this control: their enablement and trust remain separate.
 STANDARD_LOADER_SHA256 = "d64f51155fd5cba44370f9afd0300737f253b5db6244844dd8314af4fb6fd1ce"
-STANDARD_INSTRUCTIONS_SHA256 = "bd5740bde0afc6c4e60d5cdcccbd57b1872498771c885f1966588e28189ca4df"
+STANDARD_INSTRUCTIONS_SHA256 = "77bb47e62cdcb9eab2f498557aad1e73c2ef343dba40fae7c4648ab712815b1b"
 
 
 class PromptSourceError(Exception):
@@ -537,19 +549,24 @@ def desktop_runtime_context(block: str) -> tuple[str, str] | None:
     return _decode_payload(block, RUNTIME_CONTEXT_HEADING)
 
 
-def _with_desktop_artifact_context(block: str) -> str:
+def _with_desktop_artifact_context(block: str, *, hook_envelope: bool = False) -> str:
     """Add one factual, path-free summary before artifacts, retaining existing context."""
     if desktop_runtime_context(block) is not None:
         return block
     outside, _ = _outside_fence_lines(block)
     offset = next((offset - 1 for offset, line in outside
                    if line.rstrip("\r\n") == "### Artifacts"), len(block))
-    fence = _dynamic_fence(DESKTOP_ARTIFACT_CONTEXT)
+    summary = DESKTOP_ENVELOPE_CONTEXT if hook_envelope else DESKTOP_ARTIFACT_CONTEXT
+    boundary = (
+        "Path-free summary of the recognized Desktop hook envelope; not a verbatim envelope."
+        if hook_envelope else
+        "Path-free summary of the agent-reported Desktop context; not a verbatim envelope or independent verification."
+    )
+    fence = _dynamic_fence(summary)
     section = (
         f"\n{RUNTIME_CONTEXT_HEADING}\n\n- Final newline: None\n"
-        "- Boundary note: Path-free summary of the agent-reported Desktop context; "
-        "not a verbatim envelope or independent verification.\n\n"
-        f"{fence}text\n{DESKTOP_ARTIFACT_CONTEXT}\n{fence}\n"
+        f"- Boundary note: {boundary}\n\n"
+        f"{fence}text\n{summary}\n{fence}\n"
     )
     return block[:offset] + section + block[offset:]
 
@@ -759,6 +776,21 @@ def _entry_identity(entry: Entry) -> tuple[str, str]:
     )
 
 
+def desktop_user_input(prompt: str) -> tuple[str, bool]:
+    """Separate only the observed Desktop envelope; never strip arbitrary user text.
+
+    Desktop supplies one LF separator after the delivered request. Keep every other
+    byte, including authored blank lines, fences, and literal image-marker text.
+    A changed/partial envelope fails before capture so the standard path can handle it.
+    """
+    if not prompt.startswith(DESKTOP_ENVELOPE_PREFIX):
+        return prompt, False
+    header = DESKTOP_ENVELOPE_HEADER.match(prompt)
+    if header is None or not prompt[header.end():].endswith("\n\n"):
+        raise InvalidEvent("unrecognized Desktop attachment envelope; use standard capture")
+    return prompt[header.end():-1], True
+
+
 def capture_prompt(root: Path, payload: dict[str, Any]) -> dict[str, Any] | None:
     event_name = _required_string(payload, "hook_event_name")
     if event_name != "UserPromptSubmit":
@@ -774,6 +806,7 @@ def capture_prompt(root: Path, payload: dict[str, Any]) -> dict[str, Any] | None
         return None
     root = _validated_root(root, payload)
     _validate_desktop_user_transcript(root, payload, session_id)
+    prompt, has_envelope = desktop_user_input(prompt)
     history_path = root / HISTORY_NAME
     with project_lock(root):
         history, entries = _read_history(history_path)
@@ -803,6 +836,8 @@ def capture_prompt(root: Path, payload: dict[str, Any]) -> dict[str, Any] | None
             model=model_value,
             continues=continues,
         )
+        if has_envelope:
+            block = _with_desktop_artifact_context(block, hook_envelope=True)
         updated = history + "\n" + block
         updated_entries = validate_history(updated)
         if updated_entries[-1].number != number:
@@ -820,7 +855,9 @@ def capture_prompt(root: Path, payload: dict[str, Any]) -> dict[str, Any] | None
         "PromptSourceCode hook matching context (synthetic; not user-authored):\n"
         f"{compact_claim}\n"
         "Before task work, claim the earliest Pending Hook-assisted entry matching all "
-        "four values exactly. Enrich that entry; do not append a duplicate."
+        "four values exactly. The claim contains user text with any recognized Desktop "
+        "envelope separated. Enrich that entry; do not append a duplicate. Complete via "
+        "--finish-hook with an explicit interaction; a correction requires supersedes."
     )
     return {
         "hookSpecificOutput": {
@@ -1383,6 +1420,54 @@ def finish_standard(root: Path, request: dict[str, Any]) -> Entry | None:
         return next(item for item in candidates if item.number == number)
 
 
+def finish_hook(root: Path, request: dict[str, Any]) -> Entry:
+    """Render a hook completion with explicit classification and guarded replacement."""
+    root = _validated_root(root)
+    number = request.get("entry_number")
+    if isinstance(number, bool) or not isinstance(number, int) or number < 1:
+        raise InvalidEvent("entry_number must be a positive integer")
+    interaction = _required_string(request, "interaction")
+    if interaction not in {"Initial prompt", "Follow-up", "Steering", "Correction"}:
+        raise InvalidEvent("interaction must explicitly classify this hook observation")
+    supersedes = request.get("supersedes")
+    if interaction == "Correction":
+        if "supersedes" not in request:
+            raise InvalidEvent("a hook Correction requires explicit supersedes (entry number or null if unknown)")
+        if supersedes is not None and (isinstance(supersedes, bool) or not isinstance(supersedes, int) or not 0 < supersedes < number):
+            raise InvalidEvent("supersedes must be a backward entry number or null if unknown")
+    elif "supersedes" in request:
+        raise InvalidEvent("supersedes is only valid for a Correction")
+    result = _standard_result(request)
+    _, entries = _read_history(root / HISTORY_NAME)
+    entry = next((item for item in entries if item.number == number), None)
+    if entry is None or entry.fields["Capture method"] != "Hook-assisted":
+        raise NoReliableMatch("no hook entry matches entry_number")
+    if entry.fields["Status"] != "In progress":
+        raise HistoryConflict("hook entry is already terminal")
+    if supersedes is not None and not any(item.number == supersedes for item in entries):
+        raise InvalidEvent("supersedes must identify an existing earlier entry")
+    metadata, body = entry.text.split("\n\n### User input\n", 1)
+    lines = []
+    for line in metadata.splitlines():
+        if line.startswith("- Interaction:"):
+            line = f"- Interaction: {interaction}"
+        elif line == "- Status: In progress":
+            line = "- Status: Completed"
+        elif line.startswith("- Supersedes:") or (supersedes is not None and line.startswith("- Continues:")):
+            continue
+        lines.append(line)
+    if supersedes is not None:
+        lines.append(f"- Supersedes: Entry {supersedes:06d}")
+    replacement = "\n".join(lines) + "\n\n### User input\n" + body
+    replacement += "\n### Result\n\n" + result
+    # Reading above is non-mutating. The supplied digest and identities are checked
+    # again under replace_entry's lock, so interruption/enrichment races still fail.
+    return replace_entry(root, {
+        **request,
+        "replacement_entry_base64": base64.b64encode(replacement.encode("utf-8")).decode("ascii"),
+    })
+
+
 def run_hook(root: Path, payload: dict[str, Any]) -> int:
     event_name = payload.get("hook_event_name")
     if event_name == "UserPromptSubmit":
@@ -1416,6 +1501,7 @@ def main(argv: list[str] | None = None) -> int:
     mode.add_argument("--capture-state", action="store_true", help="read the current standard capture control")
     mode.add_argument("--begin-standard", action="store_true", help="append a standard entry from stdin JSON")
     mode.add_argument("--finish-standard", action="store_true", help="complete a standard entry from stdin JSON")
+    mode.add_argument("--finish-hook", action="store_true", help="classify and complete a claimed hook entry from stdin JSON")
     mode.add_argument("--preserve-artifact", action="store_true", help="preserve one source for an unfinished entry from stdin JSON")
     arguments = parser.parse_args(argv)
     standard_mode = arguments.capture_state or arguments.begin_standard or arguments.finish_standard or arguments.preserve_artifact
@@ -1452,6 +1538,11 @@ def main(argv: list[str] | None = None) -> int:
         if arguments.replace_entry:
             entry = replace_entry(root, payload)
             _write_json({"entry_number": entry.number, "entry_sha256": entry.utf8_sha256})
+            return 0
+        if arguments.finish_hook:
+            entry = finish_hook(root, payload)
+            _write_json({"entry_number": entry.number, "interaction": entry.fields["Interaction"],
+                         "entry_sha256": entry.utf8_sha256})
             return 0
         return run_hook(root, payload)
     except PromptSourceError as exc:

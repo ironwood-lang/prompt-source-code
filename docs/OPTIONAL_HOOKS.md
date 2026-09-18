@@ -98,13 +98,24 @@ and requires matching identifiers and project path, `originator: Codex Desktop`,
 `thread_source: user`. This fail-closed boundary excludes subagents and Desktop feature
 tasks such as ambient suggestion generation even when they also emit the event. Missing,
 unreadable, non-user, or mismatched metadata causes a diagnostic and standard fallback.
-The hook then encodes the prompt in the canonical dynamic fence, records its final-newline
+Before storing text, the hook separates the recognized Desktop attachment/paste envelope:
+the leading `Files mentioned by the user` header, absolute file notices, exact attachment
+safety line, and `My request` heading. It removes exactly one trailing envelope LF and
+preserves every remaining user-text byte, including additional blank lines. It records a
+path-free envelope summary in `Codex Desktop runtime context` before the entry is claimed.
+Other plain prompts remain unchanged. An envelope with changed or incomplete structure
+fails before any history write and uses standard fallback; arbitrary inline headings or
+literal image-marker text are not stripped. This is a parser for the observed Desktop
+serialization, not a claim to recover pre-serialization input or every future envelope.
+
+The hook then encodes the user text in the canonical dynamic fence, records its final-newline
 state, UTF-8 byte count, and SHA-256, and atomically appends a `Hook-assisted`, `In
 progress` entry before agent work. Every invocation is a distinct observation; identical
 prompt content is never a global deduplication key.
 
 The hook returns synthetic matching context to the agent. That context contains the
-entry number, session ID, turn ID, and Base64 of the exact UTF-8 prompt. It is not
+entry number, session ID, turn ID, and Base64 of the exact UTF-8 user text after envelope
+separation. The agent must pass this object unchanged, not reconstruct it from the envelope. It is not
 user-authored input and is not copied into `### User input` or mislabeled as Codex Desktop
 runtime context. The agent passes the claim object unchanged to:
 
@@ -120,14 +131,33 @@ the exact-byte and identifier match.
 
 The agent enriches the claimed entry instead of appending a duplicate. Hook-derived
 classification is `Initial prompt` for the first event in a session, `Steering` for later
-events with the same turn ID, and `Follow-up` for a later turn. The agent may refine a
-claimed entry to `Correction`, add `Supersedes`, attach runtime context or artifact
-metadata, and complete it. It must preserve the hook-captured input and identifiers.
+events with the same turn ID, and `Follow-up` for a later turn. These are provisional
+classifications. The agent must classify an explicit correction as `Correction` and
+identify the earlier entry in `Supersedes`, including a correction during an active turn.
+It must preserve the hook-captured input and identifiers.
 Use `.prompt-source/validate.py --preserve-artifact` with the current entry digest for
 artifact copies and metadata. Its returned digest replaces the prior digest for subsequent
 enrichment. Keep previously recorded artifact facts unchanged; stale digests are rejected.
 
-Hook-assisted entry replacements use the same core's `--replace-entry` interface. Its
+Complete each handled hook entry using:
+
+```text
+/usr/bin/python3 .codex/hooks/prompt_source_hook.py --finish-hook
+```
+
+Its stdin JSON contains the unchanged claim object plus the current
+`expected_entry_sha256`, explicit `interaction`, `result` summary, and `changed_files`
+array (`[]` for none). `Correction` requires an explicit `supersedes`: a positive backward
+entry number when identifiable, or null when no reliable target is known. The helper
+renders the correction metadata and result, removes a provisional
+`Continues` when adding `Supersedes`, and rejects missing classification, missing or
+invalid correction targets, unclaimed observations, terminal entries, stale digests, or
+identity mismatches without changing history. It shares standard capture's structured
+result rendering. Classification remains agent-mediated; the helper does not infer
+intent from keywords in the prompt.
+
+The completion helper delegates its guarded write to `--replace-entry`, which remains
+available for other immutable-preserving enrichment. That lower-level interface's
 stdin JSON contains `entry_number`, `session_id`, `turn_id`, `prompt_utf8_base64`, the
 current `expected_entry_sha256`, and `replacement_entry_base64`. The helper acquires the
 same project-directory lock, requires the expected entry digest, checks immutable input

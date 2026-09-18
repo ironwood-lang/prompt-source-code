@@ -218,7 +218,7 @@ class InstructionContractTests(unittest.TestCase):
             ),
             "stale": (
                 contract.INSTRUCTIONS_TEMPLATE.read_text(encoding="utf-8")
-                .replace("# PromptSourceCode standard capture", "# Stale standard capture", 1)
+                .replace("# PromptSourceCode capture", "# Stale capture", 1)
                 .encode("utf-8")
             ),
             "conflicting": (
@@ -238,6 +238,7 @@ class InstructionContractTests(unittest.TestCase):
                 if replacement is None:
                     dedicated.unlink()
                 else:
+                    self.assertNotEqual(replacement, dedicated.read_bytes())
                     dedicated.write_bytes(replacement)
                 with self.assertRaises(contract.InstructionContractError):
                     contract.check(project)

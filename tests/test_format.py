@@ -445,7 +445,7 @@ class FormatFixtureTests(unittest.TestCase):
             "first_in_task",
             "PromptSourceCode hook matching context",
             "--claim",
-            "--replace-entry",
+            "--finish-hook",
             "returned earliest matching `In progress`, `Hook-assisted`, `Pending` entry",
             "Deduplication note",
             "Without valid hook context",
@@ -572,7 +572,7 @@ class FormatFixtureTests(unittest.TestCase):
             ".prompt-source/validate.py",
             "no user-specific global Codex configuration",
             "Modifying a command or handler property invalidates the prior decision",
-            "PromptSourceCode 0.1.0 makes no promise that such a tool exists",
+            "PromptSourceCode 0.2.0 makes no promise that such a tool exists",
         ]
         for phrase in required_spec:
             self.assertIn(" ".join(phrase.split()), spec)
@@ -619,6 +619,7 @@ class FormatFixtureTests(unittest.TestCase):
 
     def test_copyable_distribution_assets_match_the_current_manifest(self):
         manifest = json.loads(DISTRIBUTION_MANIFEST.read_text(encoding="utf-8"))
+        self.assertEqual(manifest["release"], "0.2.0")
         self.assertEqual(manifest["prompt_source_schema"], 1)
         self.assertEqual(manifest["instruction_layout"], "dedicated-instructions-v1")
         expected_paths = {

@@ -8,7 +8,7 @@ particular Codex host, operating system, filesystem, Python runtime, and Git wor
 been exercised end to end. A format-compatible history does not imply that every
 environment is supported for live capture.
 
-PromptSourceCode 0.1.0 is the product release. Schema 1 is the storage-format version.
+PromptSourceCode 0.2.0 is the product release. Schema 1 is the storage-format version.
 Those version numbers are intentionally independent.
 
 ## Schema-1 format compatibility
@@ -46,20 +46,25 @@ Release evidence establishes the following environments:
 | Standard capture | Codex Desktop 26.908.70816 (9275), macOS 26.6.2 (25G83), local Git project | [Milestone 2 validation](CODEX_DESKTOP_STANDARD_CAPTURE_VALIDATION.md) |
 | Optional hooks | Codex Desktop 26.911.61220 (9647), macOS 26.6.2 (25G83), `/usr/bin/python3` 3.9.6, local Git project | [Milestone 3 validation](CODEX_DESKTOP_HOOK_CAPTURE_VALIDATION.md) |
 | Final 0.1.0 bundle | Codex Desktop / ChatGPT app 26.911.61220 (9647), macOS 26.6.2 (25G83), `/usr/bin/python3` 3.9.6, Git 2.54.0 (Apple Git-157), local Git project | [0.1.0 release readiness](CODEX_DESKTOP_V1_RELEASE_READINESS.md) |
+| 0.2.0 standard capture and optional-hook repair | Codex Desktop 26.915.31029 (9771), GPT-5.6 SOL Medium, macOS 26.6.2 (25G83), `/usr/bin/python3` 3.9.6, Git 2.54.0 (Apple Git-157), local Git project | [Milestone 6 combined-evidence signoff](MILESTONE_6_SIGNOFF_20260918.md) |
 
-The historical 0.1.0 standard capture had no Python runtime dependency. The Milestone 6
-candidate requires the system Python for its project-local capture helper. The optional implementation is tested
+The historical 0.1.0 standard capture had no Python runtime dependency. Release 0.2.0
+requires the system Python for its project-local capture helper. The optional implementation is tested
 with the system Python listed above and uses macOS/POSIX file locking and atomic local
 filesystem replacement. Git is used for the captured project's ordinary workflow and
 project discovery; hooks themselves execute no Git commands.
 
-These results support PromptSourceCode 0.1.0 for the tested local Codex Desktop on macOS
+These results support PromptSourceCode 0.2.0 for the tested local Codex Desktop on macOS
 workflow. They do not claim that every later Desktop, macOS, Python, or Git version
 behaves identically.
 
-## Untested environments and 0.1.0 non-goals
+The 0.2.0 signoff combines FULL_01's passing cases with actual Desktop retests of its two
+failures after repair, plus automated regression checks. It does not claim a single
+all-green full Desktop run on the final candidate; the owner accepted this evidence basis.
 
-Release 0.1.0 does not claim capture-environment support for:
+## Untested environments and 0.2.0 non-goals
+
+Release 0.2.0 does not claim capture-environment support for:
 
 - Codex CLI, except using `/hooks` to review, enable, disable, and trust optional hooks;
 - the Codex IDE extension, Codex cloud, ChatGPT cloud tasks, or remote capture;
@@ -75,13 +80,14 @@ compatibility, not evidence of supported live capture.
 ## Upgrade within schema 1
 
 The full-inline 0.1.0 installation is a pre-1.0 experiment and is not retained as a second
-capture layout. Replace that complete marked block with the compact loader from
+capture layout. Follow the [0.1.0 replacement steps](INSTALLATION.md#3-update-the-loader-and-dedicated-instructions)
+to remove the complete old block before installing the compact loader from
 [`AGENTS.prompt-source-loader.md`](../templates/AGENTS.prompt-source-loader.md), and install
 [`prompt-source-instructions-v1.md`](../templates/prompt-source-instructions-v1.md) at the
 frozen project path `.prompt-source/instructions-v1.md`, with the matching project-local
-validator at `.prompt-source/validate.py`. The documented
-`scripts/instruction_contract.py update` operation preserves all root content outside the
-loader, every nested `AGENTS.md`, and existing schema-1 provenance.
+validator at `.prompt-source/validate.py`. For an existing compact-loader installation,
+the documented `scripts/instruction_contract.py update` operation preserves all root
+content outside the loader, every nested `AGENTS.md`, and existing schema-1 provenance.
 
 If capture was disabled, restore that state after the update unless re-enabling is
 intentional. The layout uses no user-specific global Codex configuration, fallback
@@ -116,7 +122,7 @@ that schema before taking further action. Do not prepend a schema-1 header, copy
 into a new file, or reuse schema-1 hook helpers against the unknown history.
 
 A future PromptSourceCode release may provide explicit migration instructions or a
-separately validated migration tool. PromptSourceCode 0.1.0 makes no promise that such a
+separately validated migration tool. PromptSourceCode 0.2.0 makes no promise that such a
 tool exists and performs no automatic migration. Any future migration must preserve the
 original history and artifacts until the user deliberately accepts a documented
 conversion.

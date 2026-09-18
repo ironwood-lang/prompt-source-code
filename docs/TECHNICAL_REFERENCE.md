@@ -53,6 +53,14 @@ The complete frozen schema is defined in
 
 ## Release status and evidence
 
+Milestone 6 is signed off for 0.2.0 using the owner-approved
+[combined evidence](MILESTONE_6_SIGNOFF_20260918.md): the full standard checkpoint and
+remaining FULL_01 passes, the successful focused H07/H08 Desktop retest, and automated
+regression checks. The original full-validator failure remains preserved. No all-green
+full Desktop run on the repaired candidate is claimed.
+
+The following paragraphs describe the earlier 0.1.0 evidence.
+
 Milestones 0 through 4 established feasibility, the format and instruction contract,
 standard capture, optional hooks, and the frozen release candidate. Milestone 5 prepared
 the end-user onboarding surface and public 0.1.0 release.
@@ -184,6 +192,14 @@ of adding a duplicate. The handler validates that the hook transcript belongs to
 user-created Codex Desktop task, excluding subagents and internal feature prompts.
 Repeated identical submissions remain distinct.
 
+Before immutable capture, the handler separates the recognized Desktop attachment/paste
+envelope from exact user text and records a path-free context summary. Unknown envelope
+shapes fail to standard fallback. Claims contain the resulting user-text bytes.
+Normal completion uses `--finish-hook` with the claim, current digest, explicit
+interaction, result summary, and changed-file array. Corrections require an explicit
+`supersedes` target (null only when unknown). The helper renders metadata and results
+through the existing guarded replacement transaction; classification remains agent-mediated.
+
 `Interrupt` changes unfinished hook-assisted interactions in the exact matching session
 and turn to the canonical Interrupted state while preserving completed entries and
 captured input.
@@ -211,7 +227,7 @@ normally remains visible as unstaged working-tree data for inspection.
 
 ## Compatibility and upgrades
 
-The product release and storage schema are separate version axes: PromptSourceCode 0.1.0
+The product release and storage schema are separate version axes: PromptSourceCode 0.2.0
 implements schema 1. Existing valid schema-1 histories and artifacts are preserved during
 updates. Unknown, malformed, incompatible, or future schemas are not silently repaired or
 migrated. See [`COMPATIBILITY.md`](COMPATIBILITY.md) for the tested environment and upgrade

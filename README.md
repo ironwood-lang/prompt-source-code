@@ -24,11 +24,17 @@ agent harnesses are not currently supported.
 
 ## Install
 
-1. Download and unzip PromptSourceCode.
+Requires a local Git project on macOS, Codex Desktop, and `/usr/bin/python3`
+(tested with Python 3.9.6). No Python packages need to be installed.
+
+1. Download **Source code (zip)** from the
+   [PromptSourceCode 0.2.0 release](https://github.com/ironwood-lang/prompt-source-code/releases/tag/v0.2.0)
+   and unzip it.
 2. From the downloaded folder, run:
 
    ```text
-   python3 scripts/instruction_contract.py install /path/to/your/project
+   /usr/bin/python3 scripts/instruction_contract.py install "/path/to/your/project"
+   /usr/bin/python3 scripts/instruction_contract.py check "/path/to/your/project"
    ```
 
    This appends a small marked loader to the root `AGENTS.md` without replacing existing
@@ -41,6 +47,10 @@ agent harnesses are not currently supported.
 That is the complete standard installation. It uses only project files and the system
 Python standard library—no global Codex configuration, hook, skill, plugin, background
 service, or network service.
+
+Already using 0.1.0 or a development candidate? Follow the
+[update instructions](docs/INSTALLATION.md#3-update-the-loader-and-dedicated-instructions)
+to preserve your existing project guidance and history.
 
 ## Try it
 
@@ -111,6 +121,7 @@ and describe the step where you got stuck.
 - [Complete installation, updating, disabling, removal, and troubleshooting](docs/INSTALLATION.md)
 - [Compatibility and supported environments](docs/COMPATIBILITY.md)
 - [Technical reference for maintainers and advanced users](docs/TECHNICAL_REFERENCE.md)
+- [What's new in 0.2.0](docs/RELEASE_NOTES_0.2.0.md)
 
 ## License
 
