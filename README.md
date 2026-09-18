@@ -48,10 +48,6 @@ That is the complete standard installation. It uses only project files and the s
 Python standard library—no global Codex configuration, hook, skill, plugin, background
 service, or network service.
 
-Already using 0.1.0 or a development candidate? Follow the
-[update instructions](docs/INSTALLATION.md#3-update-the-loader-and-dedicated-instructions)
-to preserve your existing project guidance and history.
-
 ## Try it
 
 Send this prompt in a new Codex Desktop task:
