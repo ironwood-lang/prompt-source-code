@@ -720,10 +720,12 @@ def validate(
                 check(observation is not None and recorded_session == observation["session_id"],
                       f"{case['id']} runtime task identifier differs from Desktop evidence")
         if case["id"] in {"S06", "S08"}:
-            check(
-                "### Codex Desktop runtime context" in entry.text,
-                f"{case['id']} lacks separated Desktop runtime context",
-            )
+            try:
+                context = core.desktop_runtime_context(entry.text)
+                check(context is not None and bool(context[0].strip()),
+                      f"{case['id']} lacks separated Desktop runtime context")
+            except core.HistoryConflict as exc:
+                errors.append(f"{case['id']} has invalid Desktop runtime context: {exc}")
     if delivered_cases:
         for group in (("S03", "S04", "S04B", "S05"), ("H04", "H05", "H06", "H07")):
             if all(key in delivered_cases for key in group):
@@ -804,10 +806,12 @@ def validate(
         )
         check(notes_sha256 in artifact_text, "H08 did not preserve the attached text bytes")
         check(PASTED_FIDELITY in artifact_text, "H08 lacks pasted-image fidelity metadata")
-        check(
-            "### Codex Desktop runtime context" in case_entries["H08"].text,
-            "H08 does not keep Desktop context separate",
-        )
+        try:
+            context = core.desktop_runtime_context(case_entries["H08"].text)
+            check(context is not None and bool(context[0].strip()),
+                  "H08 does not keep Desktop context separate")
+        except core.HistoryConflict as exc:
+            errors.append(f"H08 has invalid Desktop runtime context: {exc}")
 
     expected_files = manifest["expected_files"].items()
     if standard_only:

@@ -18,6 +18,21 @@ source is `Requested artifact`. Symlinks are classified by their resolved target
 helper accepts an explicit kind only for an observed `Attached file`, `Attached image`,
 or `Pasted image`; being an image file alone does not make a source a Desktop attachment.
 
+For those three observed Desktop kinds, the helper automatically adds one fenced,
+path-free `Codex Desktop runtime context` summary before the artifact records. It states
+that the agent observed an attachment/paste and keeps Desktop notices separate from user
+input. This is a summary of the agent's reported observation, not a verbatim envelope or
+independent proof of what Desktop delivered. Filesystem-only requests do not get invented
+Desktop context. An unavailable attachment/paste still gets context, without claiming its
+bytes were preserved.
+
+The summary and artifact record are written together under the same lock and atomic
+history replacement. Repeated preservation calls retain one context section, including
+when filesystem artifacts came first. Existing valid context is retained unchanged;
+malformed context stops enrichment. Completion refuses attachment/paste entries with
+missing or empty context. These writer guards do not rewrite or invalidate old schema-1
+histories when they are read.
+
 `original_name` optionally carries an observed filename. The default is the source
 basename. Supply null for an unnamed paste; its generated name uses `image-001` and the
 actual materialized file's safe extension. When no source path is exposed, omit `source`

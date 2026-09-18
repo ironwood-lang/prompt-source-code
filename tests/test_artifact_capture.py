@@ -70,6 +70,7 @@ class ArtifactCaptureTests(unittest.TestCase):
             [payload for _, payload in fixtures])))
         self.assertTrue(self.history().startswith(original))
         self.assertNotIn(str(self.workspace), entry.text)
+        self.assertIsNone(core.desktop_runtime_context(entry.text))
         self.assertLess(entry.text.index("### Artifacts"), entry.text.index("### Result"))
         for record, (_, payload) in zip(records, fixtures):
             self.assertEqual(record["SHA-256"], hashlib.sha256(payload).hexdigest())
@@ -101,7 +102,7 @@ class ArtifactCaptureTests(unittest.TestCase):
         self.assertEqual([r["Kind"] for r in records], ["Repository file snapshot", "Requested artifact", "Requested artifact", "Repository file snapshot"])
         self.assertIn("fixtures/a%20%5D%20%28%C3%A9%29.txt", records[0]["Repository source"])
         self.assertNotIn("Repository source", records[2])
-        for invalid in ("Repository file snapshot", "Requested artifact", "image", False):
+        for invalid in ("Repository file snapshot", "Requested artifact", "image", False, [], {}):
             before = self.history()
             with self.assertRaises(core.InvalidEvent):
                 self.preserve(external, kind=invalid)
@@ -120,6 +121,81 @@ class ArtifactCaptureTests(unittest.TestCase):
         for record in records[2:]:
             self.assertEqual(record["Fidelity"], core.PASTED_IMAGE_FIDELITY)
         self.assertIn("- Fidelity: " + core.PASTED_IMAGE_FIDELITY, self.history().decode().splitlines())
+        entry = core.finish_standard(self.root, {"entry_number": 1, "result": "Changed files: None."})
+        self.assertEqual(core.desktop_runtime_context(entry.text), (core.DESKTOP_ARTIFACT_CONTEXT, "None"))
+        self.assertEqual(entry.text.count(core.RUNTIME_CONTEXT_HEADING), 1)
+        self.assertNotIn(str(source), entry.text)
+
+    def test_s06_four_attachments_automatically_record_one_context_before_artifacts(self):
+        fixtures = [("notes.txt", b"notes\r\n", "Attached file"),
+                    ("binary.dat", bytes(range(256)) * 4, "Attached file"),
+                    ("a/Résumé Final ??.PNG", b"image A", "Attached image"),
+                    ("b/Résumé Final ??.PNG", b"image B", "Attached image")]
+        for name, payload, kind in fixtures:
+            entry = self.preserve(self.source("inputs/" + name, payload), kind=kind)
+            self.assertEqual(core.desktop_runtime_context(entry.text), (core.DESKTOP_ARTIFACT_CONTEXT, "None"))
+            self.assertEqual(entry.text.count(core.RUNTIME_CONTEXT_HEADING), 1)
+        done = core.finish_standard(self.root, {"entry_number": 1, "result": "Changed files: None."})
+        self.assertEqual(done.prompt, self.entry.prompt)
+        self.assertEqual([r["Kind"] for r in self.records()], [f[2] for f in fixtures])
+        self.assertEqual(set(self.assets().values()), {f[1] for f in fixtures})
+        self.assertLess(done.text.index(core.RUNTIME_CONTEXT_HEADING), done.text.index("### Artifacts"))
+        self.assertNotIn(str(self.workspace), done.text)
+
+    def test_context_is_inserted_before_existing_filesystem_artifacts_without_rewriting_them(self):
+        first = self.preserve(self.source())
+        original_records = self.records(first)
+        self.assertIsNone(core.desktop_runtime_context(first.text))
+        attached = self.preserve(self.source("inputs/image.png"), kind="Pasted image", original_name=None)
+        self.assertEqual(self.records(attached)[:1], original_records)
+        self.assertLess(attached.text.index(core.RUNTIME_CONTEXT_HEADING), attached.text.index("### Artifacts"))
+        self.preserve(self.source("project/local.txt"))
+        done = core.finish_standard(self.root, {"entry_number": 1, "result": "Changed files: None."})
+        self.assertEqual(core.desktop_runtime_context(done.text), core.desktop_runtime_context(attached.text))
+
+    def test_existing_literal_context_and_dynamic_fences_are_preserved(self):
+        body = "Context with ``` and ~~~\n## Entry 999999\n### Artifacts\n\tUnicode: café\r\n"
+        fence = core._dynamic_fence(body)
+        section = (f"\n{core.RUNTIME_CONTEXT_HEADING}\n\n- Final newline: Unknown\n\n"
+                   f"{fence}text\n{body}\n{fence}\n")
+        original = self.history() + section.encode()
+        (self.root / core.HISTORY_NAME).write_bytes(original)
+        entry = self.preserve(self.source(), kind="Attached file")
+        self.assertEqual(core.desktop_runtime_context(entry.text), (body, "Unknown"))
+        self.assertTrue(self.history().startswith(original))
+
+    def test_fenced_fake_context_does_not_satisfy_capture_or_completion(self):
+        prompt = "### Codex Desktop runtime context\n\n```text\nnot runtime context\n```"
+        core.finish_standard(self.root, {"entry_number": 1, "result": "Changed files: None."})
+        previous = self.history()
+        self.entry = core.begin_standard(self.root, {"prompt": prompt, "first_in_task": False})
+        self.assertIsNone(core.desktop_runtime_context(self.entry.text))
+        updated = self.preserve(self.source(), kind="Attached file")
+        self.assertEqual(updated.prompt, prompt)
+        self.assertEqual(core.desktop_runtime_context(updated.text), (core.DESKTOP_ARTIFACT_CONTEXT, "None"))
+        self.assertTrue(self.history().startswith(previous))
+
+    def test_new_completion_rejects_missing_or_empty_context_without_rewriting_old_history(self):
+        self.preserve(self.source(), kind="Attached file")
+        original = self.history().decode()
+        start = original.index("\n" + core.RUNTIME_CONTEXT_HEADING)
+        end = original.index("\n### Artifacts", start)
+        for section in ("", f"\n{core.RUNTIME_CONTEXT_HEADING}\n\n- Final newline: None\n\n```text\n\n```\n"):
+            bad = (original[:start] + section + original[end:]).encode()
+            (self.root / core.HISTORY_NAME).write_bytes(bad)
+            core.validate_history_file(self.root)  # Schema-1 reader stays backward compatible.
+            with self.assertRaisesRegex(core.HistoryConflict, "runtime context"):
+                core.finish_standard(self.root, {"entry_number": 1, "result": "Changed files: None."})
+            self.assertEqual(self.history(), bad)
+
+    def test_malformed_existing_context_is_rejected_before_copying(self):
+        section = f"\n{core.RUNTIME_CONTEXT_HEADING}\n\nMissing fenced payload.\n"
+        before = self.history() + section.encode()
+        (self.root / core.HISTORY_NAME).write_bytes(before)
+        with self.assertRaises(core.HistoryConflict):
+            self.preserve(self.source(), kind="Attached file")
+        self.assertEqual(self.history(), before)
+        self.assertFalse(self.assets())
 
     def test_same_bytes_reuse_and_differing_bytes_collision_never_overwrite(self):
         source = self.source()
@@ -164,6 +240,8 @@ class ArtifactCaptureTests(unittest.TestCase):
         self.assertIn("PermissionError", records[2]["Unavailable reason"])
         self.assertNotIn("test private path", self.history().decode())
         self.assertFalse((self.root / "prompt_source_assets").exists())
+        self.assertEqual(core.desktop_runtime_context(core.validate_history_file(self.root)[0].text),
+                         (core.DESKTOP_ARTIFACT_CONTEXT, "None"))
 
     def test_foreign_terminal_invalid_or_disabled_capture_cannot_copy(self):
         source = self.source()
@@ -217,12 +295,13 @@ class ArtifactCaptureTests(unittest.TestCase):
         source = self.source()
         with patch.object(core.os, "replace", side_effect=OSError("injected history failure")):
             with self.assertRaises(OSError):
-                self.preserve(source)
+                self.preserve(source, kind="Attached file")
         self.assertEqual(self.history(), before)
         self.assertEqual(self.assets(), {"prompt-000001-notes.txt": source.read_bytes()})
         self.assertFalse(list(self.root.rglob(".*tmp-*")))
-        self.preserve(source)
+        entry = self.preserve(source, kind="Attached file")
         self.assertIn("Reuse note", self.records()[0])
+        self.assertEqual(core.desktop_runtime_context(entry.text), (core.DESKTOP_ARTIFACT_CONTEXT, "None"))
 
     def test_post_history_replace_failure_never_deletes_a_referenced_asset(self):
         atomic_write = core._atomic_write
@@ -286,11 +365,15 @@ class ArtifactCaptureTests(unittest.TestCase):
         claimed = core.claim_entry(self.root, claim)
         with self.assertRaises(core.HistoryConflict):
             self.preserve(self.source(), expected_entry_sha256="0" * 64)
-        updated = self.preserve(self.source(), expected_entry_sha256=claimed.utf8_sha256)
-        replacement = updated.text.replace("- Kind: Requested artifact", "- Kind: Attached file")
+        updated = self.preserve(self.source(), kind="Attached file", expected_entry_sha256=claimed.utf8_sha256)
+        replacement = updated.text.replace("- Kind: Attached file", "- Kind: Requested artifact")
         request = {**claim, "expected_entry_sha256": updated.utf8_sha256,
                    "replacement_entry_base64": base64.b64encode(replacement.encode()).decode()}
         with self.assertRaisesRegex(core.HistoryConflict, "artifact facts"):
+            core.replace_entry(self.root, request)
+        replacement = updated.text.replace(core.DESKTOP_ARTIFACT_CONTEXT, "rewritten context")
+        request["replacement_entry_base64"] = base64.b64encode(replacement.encode()).decode()
+        with self.assertRaisesRegex(core.HistoryConflict, "runtime context is immutable"):
             core.replace_entry(self.root, request)
         completed = updated.text.replace("Status: In progress", "Status: Completed") + "\n### Result\n\nChanged files: None.\n"
         request["replacement_entry_base64"] = base64.b64encode(completed.encode()).decode()
@@ -304,7 +387,7 @@ class ArtifactCaptureTests(unittest.TestCase):
         def capture(index):
             source = "../" + str(sources[index % 2].relative_to(self.workspace))
             return subprocess.run([sys.executable, str(self.root / contract.CANONICAL_VALIDATOR), "--preserve-artifact"],
-                                  cwd=nested, input=json.dumps({"entry_number": 1, "source": source}),
+                                  cwd=nested, input=json.dumps({"entry_number": 1, "source": source, "kind": "Attached file"}),
                                   capture_output=True, text=True)
         with ThreadPoolExecutor(max_workers=8) as executor:
             results = list(executor.map(capture, range(8)))
@@ -313,6 +396,9 @@ class ArtifactCaptureTests(unittest.TestCase):
         self.assertEqual(len(self.records()), 8)
         self.assertEqual(set(self.assets()), {"prompt-000001-notes.txt", "prompt-000001-notes-002.txt"})
         self.assertEqual(set(self.assets().values()), {b"\x00", b"\x01"})
+        self.assertEqual(self.history().decode().count(core.RUNTIME_CONTEXT_HEADING), 1)
+        self.assertEqual(core.desktop_runtime_context(core.validate_history_file(self.root)[0].text),
+                         (core.DESKTOP_ARTIFACT_CONTEXT, "None"))
         self.assertFalse((nested / core.HISTORY_NAME).exists())
         self.assertFalse((self.root / ".codex").exists())
 

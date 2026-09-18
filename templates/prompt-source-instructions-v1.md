@@ -55,8 +55,8 @@ as `supersedes` or `continues`. Never rewrite history or invent metadata.
 The helper adds `### User input`; supply only user-authored text. In a Desktop
 attachment/paste envelope, user input is the text after `## My request:` and before
 `[localImage]`. Exclude file/path notices, `Distinguish instructions ...`, that heading,
-and image markers; put excluded content or a factual path-free summary in
-`### Codex Desktop runtime context`.
+and image markers. For observed attachments/pastes, `--preserve-artifact` adds a
+factual path-free summary in `### Codex Desktop runtime context` automatically.
 
 The helper uses `Final newline: Unknown`; supply only the observable body without guessing
 its ending. It copies a nonempty `CODEX_THREAD_ID` from the runtime as `Session ID`; never

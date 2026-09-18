@@ -124,10 +124,13 @@ deterministic.
 The agent identifies observed artifact paths and Desktop attachment/paste kinds. The
 helper deterministically names, classifies, copies, verifies, and records them through
 `--preserve-artifact`; see the [artifact helper contract](ARTIFACT_CAPTURE.md). Filesystem
-classification uses the resolved source location, not a model-selected kind. The agent
-still supplies runtime context and factual results. `--finish-standard` rejects capture
-sections inside its result argument. This is a writer safeguard, not a retroactive
-reordering of historical entries.
+classification uses the resolved source location, not a model-selected kind. For observed
+Desktop attachments/pastes, that command also writes one factual, path-free runtime-context
+summary before artifacts. The agent still supplies the UI classification and factual
+results; the summary is not independent verification or a verbatim envelope.
+`--finish-standard` rejects capture sections inside its result argument and refuses to
+complete attachment/paste entries with missing or empty context. These are writer
+safeguards, not retroactive changes to historical entries.
 
 History validation checks canonical padded asset prefixes and verifies each recorded
 copy's size and digest. It cannot reconstruct an omitted original source or independently

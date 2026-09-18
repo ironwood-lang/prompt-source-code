@@ -141,6 +141,43 @@ class DesktopAcceptanceToolTests(unittest.TestCase):
         self.assertIn("duplicate", errors[0])
         self.assertIn("order", errors[1])
 
+    def test_s06_s08_require_real_nonempty_context_not_just_a_heading_substring(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            with contextlib.redirect_stdout(io.StringIO()):
+                project, manifest, export = self.make_run(Path(temporary) / "run")
+            path = project / "PROMPT_SOURCE.md"
+            original = path.read_text()
+            for mutation in ("missing", "quoted", "empty", "malformed", "duplicate", "after_result"):
+                changed = original
+                for entry in reversed(acceptance.core.validate_history(original)):
+                    if not any(f"PSC acceptance {case}." in entry.prompt for case in ("S06", "S08")):
+                        continue
+                    start = entry.text.index("\n### Codex Desktop runtime context")
+                    end = entry.text.index("\n### Artifacts", start)
+                    section = entry.text[start:end]
+                    replacement = ""
+                    if mutation == "empty":
+                        replacement = section.replace("Fixture attachment envelope.", "")
+                    elif mutation == "malformed":
+                        replacement = "\n### Codex Desktop runtime context\n\nNo fenced payload.\n"
+                    elif mutation == "duplicate":
+                        replacement = section + section
+                    block = entry.text[:start] + replacement + entry.text[end:]
+                    if mutation == "quoted":
+                        block += "\n```text\n### Codex Desktop runtime context\n```\n"
+                    elif mutation == "after_result":
+                        block += section
+                    changed = changed[:entry.start] + block + changed[entry.end:]
+                path.write_text(changed)
+                errors = io.StringIO()
+                with self.subTest(mutation=mutation), contextlib.redirect_stderr(errors), self.assertRaises(SystemExit):
+                    acceptance.validate(project, manifest, acceptance.CANONICAL_INSTRUCTIONS,
+                                        standard_only=True, desktop_export=export)
+                actual = errors.getvalue().splitlines()[1:]
+                self.assertEqual(len(actual), 2, errors.getvalue())
+                self.assertTrue(actual[0].startswith("- S06"), actual)
+                self.assertTrue(actual[1].startswith("- S08"), actual)
+
     def test_delivery_comparison_never_normalizes_internal_whitespace(self):
         prompt = "a  b\t\n\n## heading\n"
         entry = acceptance.core.Entry(1, 0, 0, "", {}, prompt[:-1], "Unknown")

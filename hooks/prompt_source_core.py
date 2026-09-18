@@ -53,6 +53,13 @@ OPTIONAL_ENTRY_FIELDS = (
     "Supersedes",
     "Status reason",
 )
+DESKTOP_ARTIFACT_KINDS = {"Attached file", "Attached image", "Pasted image"}
+RUNTIME_CONTEXT_HEADING = "### Codex Desktop runtime context"
+DESKTOP_ARTIFACT_CONTEXT = (
+    "The agent observed a Codex Desktop attachment or pasted image accompanying this "
+    "request. Artifact details are recorded separately; Desktop source-path notices "
+    "and image markers are not user-authored input."
+)
 ARTIFACT_KINDS = {
     "Attached file",
     "Attached image",
@@ -70,7 +77,7 @@ OPTIONAL_PRESERVED_ARTIFACT_FIELDS = (
 # Frozen instruction pair for the standard path. Optional hook event handlers do
 # not consult this control: their enablement and trust remain separate.
 STANDARD_LOADER_SHA256 = "d64f51155fd5cba44370f9afd0300737f253b5db6244844dd8314af4fb6fd1ce"
-STANDARD_INSTRUCTIONS_SHA256 = "cd9fa99a7aeb6b99be1893f7fecdbe1b45dfea5035b7f417bc8ce5ddf6f329b4"
+STANDARD_INSTRUCTIONS_SHA256 = "6ce534674aa8bc5e3c4b3966e2a28791721210d648fc68a54e077b3084bf2a01"
 
 
 class PromptSourceError(Exception):
@@ -519,6 +526,42 @@ def _canonical_asset_name(name: str) -> bool:
     return bool(match and int(match.group(1)) > 0 and match.group(1) == f"{int(match.group(1)):06d}")
 
 
+def desktop_runtime_context(block: str) -> tuple[str, str] | None:
+    """Decode real context, never a heading quoted inside input or result fences."""
+    outside, _ = _outside_fence_lines(block)
+    sections = [line.rstrip("\r\n") for _, line in outside if line.startswith("### ")]
+    if RUNTIME_CONTEXT_HEADING not in sections:
+        return None
+    if sections[:2] != ["### User input", RUNTIME_CONTEXT_HEADING]:
+        raise HistoryConflict("Desktop runtime context must follow User input before artifacts/results")
+    return _decode_payload(block, RUNTIME_CONTEXT_HEADING)
+
+
+def _with_desktop_artifact_context(block: str) -> str:
+    """Add one factual, path-free summary before artifacts, retaining existing context."""
+    if desktop_runtime_context(block) is not None:
+        return block
+    outside, _ = _outside_fence_lines(block)
+    offset = next((offset - 1 for offset, line in outside
+                   if line.rstrip("\r\n") == "### Artifacts"), len(block))
+    fence = _dynamic_fence(DESKTOP_ARTIFACT_CONTEXT)
+    section = (
+        f"\n{RUNTIME_CONTEXT_HEADING}\n\n- Final newline: None\n"
+        "- Boundary note: Path-free summary of the agent-reported Desktop context; "
+        "not a verbatim envelope or independent verification.\n\n"
+        f"{fence}text\n{DESKTOP_ARTIFACT_CONTEXT}\n{fence}\n"
+    )
+    return block[:offset] + section + block[offset:]
+
+
+def _require_desktop_artifact_context(block: str) -> None:
+    """Guard new completions, without imposing a new requirement on old histories."""
+    if any(record["Kind"] in DESKTOP_ARTIFACT_KINDS for record in _validate_artifacts(block)):
+        context = desktop_runtime_context(block)
+        if context is None or not context[0].strip():
+            raise HistoryConflict("Desktop attachments/pastes require separated runtime context before completion")
+
+
 def validate_history(text: str) -> list[Entry]:
     if not text.startswith(SCHEMA_MARKER + "\n"):
         raise HistoryConflict("existing history does not have the version 1 schema marker")
@@ -932,6 +975,9 @@ def replace_entry(root: Path, request: dict[str, Any]) -> Entry:
         previous_artifacts = _validate_artifacts(current.text)
         if _validate_artifacts(candidate.text)[:len(previous_artifacts)] != previous_artifacts:
             raise HistoryConflict("captured artifact facts are immutable")
+        context = desktop_runtime_context(current.text)
+        if context is not None and desktop_runtime_context(candidate.text) != context:
+            raise HistoryConflict("captured runtime context is immutable")
         if current.fields.get("Agent observation") == "Claimed" and candidate.fields.get(
             "Agent observation"
         ) != "Claimed":
@@ -942,6 +988,8 @@ def replace_entry(root: Path, request: dict[str, Any]) -> Entry:
             raise HistoryConflict(f"terminal status {old_status!r} cannot be replaced")
         if new_status == "Interrupted" and old_status != "Interrupted":
             raise HistoryConflict("only the Interrupt hook may create Interrupted status")
+        if old_status == "In progress" and new_status == "Completed":
+            _require_desktop_artifact_context(candidate.text)
         _atomic_write(history_path, updated)
         return next(entry for entry in updated_entries if entry.number == number)
 
@@ -1165,8 +1213,9 @@ def preserve_artifact(root: Path, request: dict[str, Any]) -> Entry | None:
             if [line.rstrip("\r\n") for _, line in outside if line.startswith("### ")][-1] != "### Artifacts":
                 raise HistoryConflict("existing Artifacts must be the final unfinished section")
         kind = request.get("kind")
-        if kind not in (None, "Attached file", "Attached image", "Pasted image"):
+        if kind is not None and (not isinstance(kind, str) or kind not in DESKTOP_ARTIFACT_KINDS):
             raise InvalidEvent("omit kind for filesystem sources; only observed Desktop attachment/paste kinds are accepted")
+        block = _with_desktop_artifact_context(entry.text) if kind in DESKTOP_ARTIFACT_KINDS else entry.text
         source_value = request.get("source")
         source = None
         if source_value is not None:
@@ -1254,7 +1303,7 @@ def preserve_artifact(root: Path, request: dict[str, Any]) -> Entry | None:
                 fields.append("- Reuse note: Existing flat asset verified byte-for-byte and reused.")
         addition = ("\n### Artifacts\n" if not records else "")
         addition += f"\n#### Artifact {len(records) + 1}\n\n" + "\n".join(fields) + "\n"
-        updated = history[:entry.end] + addition + history[entry.end:]
+        updated = history[:entry.start] + block + addition + history[entry.end:]
         candidates = validate_history(updated)
         _atomic_write(root / HISTORY_NAME, updated)
         return next(item for item in candidates if item.number == entry.number)
@@ -1283,6 +1332,7 @@ def finish_standard(root: Path, request: dict[str, Any]) -> Entry | None:
         session = entry.fields.get("Session ID")
         if session is not None and session != _json_field(os.environ.get("CODEX_THREAD_ID", "")):
             raise NoReliableMatch("entry belongs to a different runtime task")
+        _require_desktop_artifact_context(entry.text)
         block = entry.text.replace("- Status: In progress\n", "- Status: Completed\n", 1)
         block += "\n### Result\n\n" + result + ("" if result.endswith("\n") else "\n")
         updated = history[: entry.start] + block + history[entry.end :]
