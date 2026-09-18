@@ -8,6 +8,11 @@ the preparation command refuses to reuse an existing path.
 Do not mark Milestone 6 complete from automated tests alone. The developer must perform
 the Desktop actions, record factual results, and pass the final validator.
 
+**Current prepared run: `PSC_M6_ACCEPTANCE_20260917_FINAL_03`.** Preparation and
+installation are already complete for this run. Start at **Operator checklist — follow
+these steps exactly**, below; do not repeat sections 1 and 2. Run S01–S14, then stop and
+return to the development task. Optional hooks are outside this handoff.
+
 The completed `PSC_M6_ACCEPTANCE_20260917_FINAL_02` run is preserved evidence. Do not
 repeat S01–S14 there or update its installed candidate. The developer can audit its
 existing Desktop messages using section 7; a failing case does not require repeating
@@ -83,31 +88,54 @@ and create a new task manually.
 
 ## Operator checklist — follow these steps exactly
 
-Use this checklist only after sections 1 and 2 have prepared a fresh workspace. In
-Terminal, from any folder, set the exact workspace path supplied by the developer.
-The example below is a placeholder, not an already prepared run. Repeat these exports
-whenever opening a new shell:
+**Start here for the prepared S01–S14 run.** The fresh workspace below contains the
+frozen candidate that passed the artifact retest (`fc9af97`). No acceptance prompts have
+been run in it. Earlier projects and their evidence are unchanged; do not use `FINAL_02`
+or `PSC_M6_RETEST` for this run.
+
+Open Terminal. From **any folder**, paste and run this whole block once. Run it again
+if you open a new shell:
 
 ```sh
-export PSC_RUN_ROOT=~/Vibe/PSC_M6_ACCEPTANCE_YYYYMMDD
+export PSC_RUN_ROOT=~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_03
 export PSC_PROJECT="$PSC_RUN_ROOT/project"
 export PSC_INPUTS="$PSC_RUN_ROOT/inputs"
 export PSC_REPO=~/Vibe/PromptSourceCode
 ```
+
+The workspace is a container, not the Codex project. The exact project folders are:
+
+- S01–S13: `~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_03/project`
+- S14 only: `~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_03/project/packages/demo`
+
+Add them as **two separate projects**, at the steps below. Do not change the folder of an
+existing project or reuse an earlier task. Trust each folder if Desktop asks. Do not send
+a greeting, setup prompt, or trial message: S01 and S14 must be their tasks' first prompts.
 
 For every `pbcopy` command below: run the command, click the Codex Desktop message box,
 press Command-V, and submit once. Do not edit the pasted text. Unless a step explicitly
 says to steer or press Stop, wait for Codex to finish before continuing.
 
 Record the model and thinking mode chosen for this run. Use the same settings for root
-and nested tasks; results apply to the settings actually tested.
+and nested tasks; results apply to the settings actually tested. Tell the development
+task those settings when you finish; do not send them as an extra test prompt.
 
 ### Standard capture: S01 through S13
 
 #### S01 — start the root task
 
-1. In Codex Desktop, open `$PSC_PROJECT` as the project.
-2. Create a brand-new task manually.
+1. In Terminal copy the root project folder:
+
+   ```sh
+   printf '%s' "$PSC_PROJECT" | pbcopy
+   ```
+
+   In Codex Desktop choose Add project. In the folder picker press Command-Shift-G,
+   Command-V, Return, then Open. Trust the folder if prompted. This is a **new project**
+   pointing to the `project` subdirectory, not the enclosing `FINAL_03` workspace.
+2. Select that project and create a brand-new task manually. Work directly in this local
+   folder; do not choose a Git worktree or cloud environment. Choose your model/thinking
+   settings before submitting S01 and keep them unchanged for this run.
 3. In Terminal run:
 
    ```sh
@@ -317,8 +345,12 @@ and nested tasks; results apply to the settings actually tested.
 
 5. Paste, submit, and wait for completion.
 6. Leave the nested task unchanged in the sidebar.
-7. Select the original root project (`$PSC_PROJECT`) before continuing. The next step will
-   create a new task in that original root project.
+7. **Stop here for this prepared run.** Return to the PromptSourceCode development task
+   and say “S01–S14 complete,” with the model and thinking mode you used. Leave both test
+   tasks and their files unchanged. The development task will retrieve the evidence and
+   run the standard-only validator; you do not need to run validation commands.
+8. Do not proceed to S15 or install/trust hooks unless you separately decide to test them.
+   If continuing later, select the original root project (`$PSC_PROJECT`) first.
 
 ### Stop after standard capture when optional hooks are declined
 
