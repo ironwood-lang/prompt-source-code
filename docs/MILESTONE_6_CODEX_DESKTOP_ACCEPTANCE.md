@@ -8,16 +8,16 @@ the preparation command refuses to reuse an existing path.
 Do not mark Milestone 6 complete from automated tests alone. The developer must perform
 the Desktop actions, record factual results, and pass the final validator.
 
-**Current prepared run: `PSC_M6_ACCEPTANCE_20260917_FINAL_03`.** Preparation and
-installation are already complete for this run. Start at **Operator checklist — follow
-these steps exactly**, below; do not repeat sections 1 and 2. Run S01–S14, then stop and
-return to the development task. Optional hooks are outside this handoff.
+**Current prepared run: `PSC_M6_ACCEPTANCE_20260918_FULL_01`.** Preparation and
+installation are complete. Start at **Operator checklist — follow these steps exactly**,
+below; do not repeat sections 1 and 2. This guide covers the full sequence: S01–S14,
+a validation checkpoint, then S15 and H01–H11 through the final Git check.
 
-The completed `PSC_M6_ACCEPTANCE_20260917_FINAL_02` run is preserved evidence. Do not
-repeat S01–S14 there or update its installed candidate. The developer can audit its
-existing Desktop messages using section 7; a failing case does not require repeating
-unaffected cases. Focused regression checks must use a separate fresh project and be
-reported separately from complete acceptance.
+The implementation is frozen at `429e7689fc956f7929ed08f0a962e6afd869fe0b`.
+Earlier `FINAL_01`, `FINAL_02`, `FINAL_03`, and focused retest workspaces are preserved
+evidence. Do not reuse, update, reset, or delete them. This is the operator's last planned
+full manual run. If a check fails, preserve the evidence and report it; do not silently
+repair history, resubmit a case, or assume permission for another full run.
 
 ## 1. Prepare a fresh isolated workspace
 
@@ -88,25 +88,30 @@ and create a new task manually.
 
 ## Operator checklist — follow these steps exactly
 
-**Start here for the prepared S01–S14 run.** The fresh workspace below contains the
-frozen candidate that passed the artifact retest (`fc9af97`). No acceptance prompts have
-been run in it. Earlier projects and their evidence are unchanged; do not use `FINAL_02`
-or `PSC_M6_RETEST` for this run.
+**Start here.** Use only the new `FULL_01` workspace below. It contains the tested
+result-reporting repair (`429e768`); no acceptance prompts have been submitted in it.
+All 28 prompt files, source artifacts, collision fixtures, existing root/nested guidance,
+installation, and local Git origin are prepared. The installation is clean and synchronized
+with that local origin. The preparation record is `preparation.json` beside `project/`.
+
+The root and nested folders must be added as new Codex Desktop projects by you. Nothing
+has been submitted on your behalf. Do not use `PSC_RETEST_01` or an earlier `FINAL_*` project.
 
 Open Terminal. From **any folder**, paste and run this whole block once. Run it again
 if you open a new shell:
 
 ```sh
-export PSC_RUN_ROOT=~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_03
+export PSC_RUN_ROOT=~/Vibe/PSC_M6_ACCEPTANCE_20260918_FULL_01
 export PSC_PROJECT="$PSC_RUN_ROOT/project"
 export PSC_INPUTS="$PSC_RUN_ROOT/inputs"
+export PSC_FROZEN="$PSC_RUN_ROOT/candidate"
 export PSC_REPO=~/Vibe/PromptSourceCode
 ```
 
 The workspace is a container, not the Codex project. The exact project folders are:
 
-- S01–S13: `~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_03/project`
-- S14 only: `~/Vibe/PSC_M6_ACCEPTANCE_20260917_FINAL_03/project/packages/demo`
+- S01–S13, then S15 and every H case: `~/Vibe/PSC_M6_ACCEPTANCE_20260918_FULL_01/project`
+- S14 only: `~/Vibe/PSC_M6_ACCEPTANCE_20260918_FULL_01/project/packages/demo`
 
 Add them as **two separate projects**, at the steps below. Do not change the folder of an
 existing project or reuse an earlier task. Trust each folder if Desktop asks. Do not send
@@ -116,9 +121,14 @@ For every `pbcopy` command below: run the command, click the Codex Desktop messa
 press Command-V, and submit once. Do not edit the pasted text. Unless a step explicitly
 says to steer or press Stop, wait for Codex to finish before continuing.
 
-Record the model and thinking mode chosen for this run. Use the same settings for root
-and nested tasks; results apply to the settings actually tested. Tell the development
-task those settings when you finish; do not send them as an extra test prompt.
+Choose **GPT-5.6 SOL, Medium** for every new test task, including the nested and hook
+tasks. These are the settings used for the successful focused smoke checks. If unavailable,
+stop and tell the development task rather than silently choosing another model. Report
+your actual settings at the S14 checkpoint; do not send them as an extra test prompt.
+
+Keep this guide open and follow it top to bottom. If a command errors, a required file is
+missing, or you accidentally submit the wrong prompt, stop and report the case in the
+development task. Do not ask the test task to repair the test or repeat a submission.
 
 ### Standard capture: S01 through S13
 
@@ -132,10 +142,10 @@ task those settings when you finish; do not send them as an extra test prompt.
 
    In Codex Desktop choose Add project. In the folder picker press Command-Shift-G,
    Command-V, Return, then Open. Trust the folder if prompted. This is a **new project**
-   pointing to the `project` subdirectory, not the enclosing `FINAL_03` workspace.
+   pointing to the `project` subdirectory, not the enclosing `FULL_01` workspace.
 2. Select that project and create a brand-new task manually. Work directly in this local
    folder; do not choose a Git worktree or cloud environment. Choose your model/thinking
-   settings before submitting S01 and keep them unchanged for this run.
+   settings to **GPT-5.6 SOL, Medium** before submitting S01 and keep them unchanged.
 3. In Terminal run:
 
    ```sh
@@ -277,9 +287,12 @@ task those settings when you finish; do not send them as an extra test prompt.
 
 #### S12 — disable capture for exactly one interaction
 
-1. In Terminal disable the loader control:
+1. After S11 finishes, save the current provenance hashes outside the project, then
+   disable the loader control. Run this whole block in Terminal:
 
    ```sh
+   (cd "$PSC_PROJECT" && shasum -a 256 PROMPT_SOURCE.md prompt_source_assets/*) \
+     > "$PSC_RUN_ROOT/disabled-before.sha256" &&
    perl -0pi -e 's/- Capture: enabled/- Capture: disabled/' "$PSC_PROJECT/AGENTS.md"
    ```
 
@@ -298,6 +311,13 @@ task those settings when you finish; do not send them as an extra test prompt.
 
 4. Paste, submit, and wait for completion. The ordinary file should be created even though
    capture is disabled.
+5. In Terminal verify that capture did not change history or assets:
+
+   ```sh
+   (cd "$PSC_PROJECT" && shasum -a 256 -c "$PSC_RUN_ROOT/disabled-before.sha256")
+   ```
+
+   Every line must end in `OK`. If not, stop and report it; do not proceed to S13.
 
 #### S13 — re-enable capture
 
@@ -336,7 +356,8 @@ task those settings when you finish; do not send them as an extra test prompt.
    In Codex Desktop choose Add project. In the folder picker press Command-Shift-G,
    Command-V, Return, then Open. This adds a **separate project**; do not change the
    working folder of the existing root task.
-3. Select that new nested project and create a brand-new task in it.
+3. Select that new nested project and create a brand-new local task in it. Choose
+   **GPT-5.6 SOL, Medium** before submitting anything.
 4. Run:
 
    ```sh
@@ -345,12 +366,14 @@ task those settings when you finish; do not send them as an extra test prompt.
 
 5. Paste, submit, and wait for completion.
 6. Leave the nested task unchanged in the sidebar.
-7. **Stop here for this prepared run.** Return to the PromptSourceCode development task
-   and say “S01–S14 complete,” with the model and thinking mode you used. Leave both test
-   tasks and their files unchanged. The development task will retrieve the evidence and
-   run the standard-only validator; you do not need to run validation commands.
-8. Do not proceed to S15 or install/trust hooks unless you separately decide to test them.
-   If continuing later, select the original root project (`$PSC_PROJECT`) first.
+7. **Pause here for validation.** Return to the PromptSourceCode development task and say:
+   “FULL_01: S01–S14 complete with GPT-5.6 SOL Medium.” If you used different settings,
+   report those instead. Leave both test tasks and their files unchanged.
+8. Wait for the development task to retrieve the evidence, run the standard-only
+   validator, and explicitly say to continue with S15. Do not install or trust hooks
+   before that checkpoint passes. You do not need to run the validator yourself.
+9. After clearance, continue below in this same workspace, selecting the original
+   root project (`$PSC_PROJECT`), not the nested project.
 
 ### Stop after standard capture when optional hooks are declined
 
@@ -366,6 +389,10 @@ If the operator does not consent to optional-hook testing, stop after S14:
 
 ### Install inert optional hooks: S15
 
+Start this section only after the development task clears the S14 checkpoint. The files
+under `$PSC_FROZEN/hooks/` are a byte-verified snapshot of the frozen candidate, outside
+the captured project. Use those files, not a later checkout or an older test project.
+
 #### Install but do not trust the hooks
 
 1. Wait for the current task to finish and leave it unchanged in the sidebar.
@@ -373,14 +400,18 @@ If the operator does not consent to optional-hook testing, stop after S14:
 
    ```sh
    cd "$PSC_PROJECT"
-   mkdir -p .codex/hooks
-   cp "$PSC_REPO/hooks/prompt_source_core.py" .codex/hooks/
-   cp "$PSC_REPO/hooks/prompt_source_hook.py" .codex/hooks/
-   cp "$PSC_REPO/hooks/hooks.json.example" .codex/hooks.json
+   test ! -e .codex &&
+     mkdir -p .codex/hooks &&
+     cp "$PSC_FROZEN/hooks/prompt_source_core.py" .codex/hooks/ &&
+     cp "$PSC_FROZEN/hooks/prompt_source_hook.py" .codex/hooks/ &&
+     cp "$PSC_FROZEN/hooks/hooks.json.example" .codex/hooks.json
    ```
 
-3. Do not open CLI `/hooks` yet.
-4. Open `$PSC_PROJECT` in Codex Desktop and create a brand-new task manually.
+3. Do not enable or trust either hook yet. Folder trust from S01 is different from hook
+   trust. If Desktop unexpectedly says these exact hooks are already trusted or active,
+   stop and report that before submitting S15.
+4. Select the existing root project in Codex Desktop and create a brand-new local task
+   manually, with **GPT-5.6 SOL, Medium**. Do not reuse the S01 task or the nested task.
 
 #### S15 — prove copied hooks are inert before trust
 
@@ -404,11 +435,21 @@ If the operator does not consent to optional-hook testing, stop after S14:
    ```
 
 3. At the Codex CLI prompt enter `/hooks`.
-4. Select `UserPromptSubmit`, review its exact command, then enable and trust it.
-5. Return to `/hooks`, select `Interrupt`, review it separately, then enable and trust it.
+4. Select `UserPromptSubmit` from this project's `.codex/hooks.json`, review its exact
+   command, then enable and trust it. Do not select a hook from another project or source.
+5. Return to `/hooks`, select `Interrupt` from that same file, review it separately, then
+   enable and trust it.
 6. Confirm both definitions show enabled and trusted. Never use a trust-bypass option.
-7. Exit Codex CLI.
-8. Launch Codex Desktop again, open `$PSC_PROJECT`, and create a brand-new task manually.
+7. Exit Codex CLI with Control-C; if it asks for a second Control-C, press it again.
+   Wait for the normal Terminal prompt. Do not submit acceptance prompts in the CLI.
+8. Launch Codex Desktop again, select the root project, and create a brand-new local task
+   manually with **GPT-5.6 SOL, Medium**. H01 must be its first submission. Keep H01–H10
+   in this task, including the steering cases.
+
+The exact-definition review and `/hooks` controls follow the
+[official OpenAI hook documentation](https://learn.chatgpt.com/docs/hooks#review-and-trust-hooks).
+The full Desktop restart is retained from this project's validated workflow. If the
+review controls differ or a hook is missing, stop and report it; do not bypass trust.
 
 ### Hook-assisted capture: H01 through H10
 
@@ -554,10 +595,12 @@ If the operator does not consent to optional-hook testing, stop after S14:
    ```
 
 3. Enter `/hooks`.
-4. Select `UserPromptSubmit` and disable it.
-5. Return to `/hooks`, select `Interrupt`, and disable it separately.
-6. Confirm both definitions are disabled, then exit Codex CLI.
-7. Launch Desktop again, open `$PSC_PROJECT`, and create a brand-new task manually.
+4. Select this project's `UserPromptSubmit` and disable it.
+5. Return to `/hooks`, select this project's `Interrupt`, and disable it separately.
+6. Confirm both definitions are disabled. Press Control-C to exit the CLI, again if
+   prompted, and wait for the normal Terminal prompt.
+7. Launch Desktop again, select the root project, and create a brand-new local task
+   manually with **GPT-5.6 SOL, Medium**. H11 must be its first submission.
 
 #### H11 — standard capture after hook disable
 
@@ -571,21 +614,26 @@ If the operator does not consent to optional-hook testing, stop after S14:
 
 ### Final Git checkpoint — do this after H11
 
-1. In Terminal run exactly:
+1. In Terminal run exactly. The origin check guards the push: it must be the prepared
+   sibling bare repository, not GitHub. These commands commit only the ordinary test file:
 
    ```sh
    cd "$PSC_PROJECT"
-   git add ordinary-git-check.txt
-   git commit -m "test: verify ordinary project Git behavior"
-   git push origin main
-   git status --short --branch
+   test "$(git remote get-url origin)" = "../origin.git" &&
+     git add ordinary-git-check.txt &&
+     git commit -m "test: verify ordinary project Git behavior" &&
+     git push origin main &&
+     git status --short --branch
    git rev-list --left-right --count origin/main...main
    ```
 
 2. Confirm the divergence command prints `0  0` (two zeroes separated by whitespace).
 3. Do not add or commit `.codex/`, `PROMPT_SOURCE.md`, or `prompt_source_assets/`.
-4. Stop here and tell the PromptSourceCode development task that the Desktop sequence is
-   complete. The development task will run the validator and all remaining checks.
+4. Stop here and tell the PromptSourceCode development task:
+   “FULL_01 complete through H11 and the final Git check, using GPT-5.6 SOL Medium.”
+   Report any deviation or skipped step. Leave every test task and file unchanged.
+   The development task will export the evidence, run the full validator, and record
+   factual results. You do not need to interpret the maintainer sections below.
 
 The sections below preserve the prompts, expected evidence, and maintainer rationale. You
 do not need to interpret them while operating the checklist above.
@@ -714,7 +762,7 @@ contains only S08 text and the Desktop paste envelope is separated as runtime co
 
 The preparation command deliberately did not create
 `$PSC_INPUTS/artifacts/intentionally-missing.bin`. Submit the rendered `S09.txt`, which
-contains that absolute path:
+contains that prepared home-relative path:
 
 ```text
 PSC acceptance S09. Preserve the artifact at `<prepared missing path>` if it is available. It was deliberately removed before this prompt; do not invent content or metadata when it cannot be read.
@@ -941,7 +989,7 @@ temporary, diagnostic, or bytecode-cache files.
 
 ## 7. Run deterministic validation
 
-The development agent retrieves every page of the root and nested Desktop tasks through
+The development agent retrieves every page of all root and nested Desktop tasks through
 `read_thread`, including all `userMessage` items. Export the returned pages as a JSON
 array to `$PSC_RUN_ROOT/desktop-export.json`, outside the captured project. Keep each
 page's `thread` (including ID and cwd), `page`, and `turns` with ID, `startedAt`, `status`,
@@ -954,6 +1002,12 @@ The operator does not need to resubmit prompts to supply this evidence. Missing 
 data is reported as missing evidence rather than a capture-text failure. An export
 compares recorded delivery with stored text; it does not prove pre-serialization fidelity.
 
+For this prepared run, use candidate ref
+`429e7689fc956f7929ed08f0a962e6afd869fe0b`. At the S14 checkpoint, save the standard-only
+export as `desktop-standard-export.json` and retain its validator output and a snapshot
+of history/assets outside `project/`. After H11, save the complete export separately as
+`desktop-export.json`; never overwrite the checkpoint evidence or preparation record.
+
 From the PromptSourceCode checkout, run:
 
 ```sh
@@ -961,17 +1015,19 @@ python3 scripts/desktop_acceptance.py validate \
   "$PSC_PROJECT" \
   "$PSC_INPUTS/manifest.json" \
   --instructions-relative .prompt-source/instructions-v1.md \
-  --desktop-export "$PSC_RUN_ROOT/desktop-export.json"
+  --desktop-export "$PSC_RUN_ROOT/desktop-export.json" \
+  --candidate-ref 429e7689fc956f7929ed08f0a962e6afd869fe0b
 ```
 
-When the operator stops after S14 and declines all optional-hook testing, run instead:
+At the S14 checkpoint (or when optional-hook testing is declined), run instead:
 
 ```sh
 python3 scripts/desktop_acceptance.py validate \
   "$PSC_PROJECT" \
   "$PSC_INPUTS/manifest.json" \
   --instructions-relative .prompt-source/instructions-v1.md \
-  --desktop-export "$PSC_RUN_ROOT/desktop-export.json" \
+  --desktop-export "$PSC_RUN_ROOT/desktop-standard-export.json" \
+  --candidate-ref 429e7689fc956f7929ed08f0a962e6afd869fe0b \
   --standard-only
 ```
 
