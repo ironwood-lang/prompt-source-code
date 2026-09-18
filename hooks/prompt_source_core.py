@@ -70,7 +70,7 @@ OPTIONAL_PRESERVED_ARTIFACT_FIELDS = (
 # Frozen instruction pair for the standard path. Optional hook event handlers do
 # not consult this control: their enablement and trust remain separate.
 STANDARD_LOADER_SHA256 = "d64f51155fd5cba44370f9afd0300737f253b5db6244844dd8314af4fb6fd1ce"
-STANDARD_INSTRUCTIONS_SHA256 = "114a6dd547a56521a4c366cf579424f363435b91367f24913551a8260ba2d157"
+STANDARD_INSTRUCTIONS_SHA256 = "cd9fa99a7aeb6b99be1893f7fecdbe1b45dfea5035b7f417bc8ce5ddf6f329b4"
 
 
 class PromptSourceError(Exception):
@@ -396,7 +396,7 @@ def _decode_payload(
     return prompt, final_newline
 
 
-def _validate_artifacts(block: str) -> None:
+def _validate_artifacts(block: str) -> list[dict[str, str]]:
     """Validate the closed schema-1 artifact record structure, when present."""
     outside, balanced = _outside_fence_lines(block)
     if not balanced:
@@ -407,7 +407,7 @@ def _validate_artifacts(block: str) -> None:
         if line.rstrip("\r\n") == "### Artifacts"
     ]
     if not sections:
-        return
+        return []
     if len(sections) != 1:
         raise HistoryConflict("entry contains duplicate Artifacts sections")
     section_start = sections[0]
@@ -430,6 +430,7 @@ def _validate_artifacts(block: str) -> None:
     if numbers != list(range(1, len(numbers) + 1)):
         raise HistoryConflict("artifact record numbers are not consecutive from 1")
 
+    records = []
     for index, (_, content_start, number) in enumerate(headings):
         content_end = headings[index + 1][0] if index + 1 < len(headings) else section_end
         fields: list[tuple[str, str]] = []
@@ -449,6 +450,7 @@ def _validate_artifacts(block: str) -> None:
         if len(keys) != len(set(keys)):
             raise HistoryConflict(f"Artifact {number} contains a duplicate field")
         values = dict(fields)
+        records.append(values)
         if not keys or keys[0] != "Kind" or values["Kind"] not in ARTIFACT_KINDS:
             raise HistoryConflict(f"Artifact {number} has an invalid or missing Kind")
         original_index = 1 if len(keys) > 1 and keys[1] == "Original name (JSON)" else None
@@ -497,6 +499,8 @@ def _validate_artifacts(block: str) -> None:
         )
         if link is None or link.group(1) != link.group(3):
             raise HistoryConflict(f"Artifact {number} Preserved copy link is invalid")
+        if not _canonical_asset_name(link.group(3)):
+            raise HistoryConflict(f"Artifact {number} filename lacks a canonical padded entry prefix")
         if not values["Byte count"].isdecimal():
             raise HistoryConflict(f"Artifact {number} Byte count is not decimal")
         if re.fullmatch(r"[0-9a-f]{64}", values["SHA-256"]) is None:
@@ -507,6 +511,12 @@ def _validate_artifacts(block: str) -> None:
             raise HistoryConflict(
                 f"Artifact {number} pasted-image Fidelity is not canonical"
             )
+    return records
+
+
+def _canonical_asset_name(name: str) -> bool:
+    match = re.fullmatch(r"prompt-(\d{6,})-[A-Za-z0-9][A-Za-z0-9._-]*", name)
+    return bool(match and int(match.group(1)) > 0 and match.group(1) == f"{int(match.group(1)):06d}")
 
 
 def validate_history(text: str) -> list[Entry]:
@@ -919,6 +929,9 @@ def replace_entry(root: Path, request: dict[str, Any]) -> Entry:
             raise HistoryConflict("captured final-newline state is immutable")
         if current.fields.get("Model") != candidate.fields.get("Model"):
             raise HistoryConflict("hook-provided Model is immutable")
+        previous_artifacts = _validate_artifacts(current.text)
+        if _validate_artifacts(candidate.text)[:len(previous_artifacts)] != previous_artifacts:
+            raise HistoryConflict("captured artifact facts are immutable")
         if current.fields.get("Agent observation") == "Claimed" and candidate.fields.get(
             "Agent observation"
         ) != "Claimed":
@@ -946,7 +959,20 @@ def validate_history_file(root: Path) -> list[Entry]:
         text = path.read_bytes().decode("utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         raise HistoryConflict(f"cannot read history as UTF-8: {exc}") from exc
-    return validate_history(text)
+    entries = validate_history(text)
+    assets = root / "prompt_source_assets"
+    for entry in entries:
+        for record in _validate_artifacts(entry.text):
+            if "Preserved copy" not in record:
+                continue
+            relative = record["Preserved copy"].split("(<", 1)[1][:-2]
+            path = root / relative
+            if assets.is_symlink() or path.is_symlink() or not path.is_file():
+                raise HistoryConflict(f"preserved copy is missing or not a regular local file: {relative}")
+            payload = path.read_bytes()
+            if len(payload) != int(record["Byte count"]) or hashlib.sha256(payload).hexdigest() != record["SHA-256"]:
+                raise HistoryConflict(f"preserved copy differs from recorded bytes: {relative}")
+    return entries
 
 
 def standard_capture_state(root: Path) -> bool:
@@ -1072,6 +1098,168 @@ def begin_standard(root: Path, request: dict[str, Any]) -> Entry | None:
         return result
 
 
+def _unfinished_owned_entry(entries: list[Entry], request: dict[str, Any]) -> Entry:
+    number = request.get("entry_number")
+    if isinstance(number, bool) or not isinstance(number, int) or number < 1:
+        raise InvalidEvent("entry_number must be a positive integer")
+    entry = next((item for item in entries if item.number == number), None)
+    if entry is None:
+        raise NoReliableMatch("no entry matches entry_number")
+    if entry.fields["Status"] != "In progress":
+        raise HistoryConflict("entry is already terminal")
+    session = entry.fields.get("Session ID")
+    if session is not None and session != _json_field(os.environ.get("CODEX_THREAD_ID", "")):
+        raise NoReliableMatch("entry belongs to a different runtime task")
+    if entry.fields["Capture method"] == "Hook-assisted":
+        if entry.fields.get("Agent observation") != "Claimed":
+            raise NoReliableMatch("artifact enrichment requires a claimed hook entry")
+        if request.get("expected_entry_sha256") != entry.utf8_sha256:
+            raise HistoryConflict("hook entry changed; re-read its digest before enrichment")
+    return entry
+
+
+def _asset_basename(number: int, name: str, unnamed_paste: int | None = None) -> tuple[str, str]:
+    """Implement schema-1 naming once, including its displayed entry number."""
+    name = Path(name).name
+    suffix = re.search(r"\.([A-Za-z0-9]{1,16})$", name)
+    extension = "." + suffix.group(1).lower() if suffix else ""
+    stem = name[:suffix.start()] if suffix else name
+    stem = re.sub(r"[^A-Za-z0-9._-]+", "-", stem)
+    stem = re.sub(r"-+", "-", stem).lstrip(".").strip("._-")[:80] or "artifact"
+    if unnamed_paste is not None:
+        stem = f"image-{unnamed_paste:03d}"
+    return f"prompt-{number:06d}-{stem}", extension
+
+
+def _publish_asset(path: Path, payload: bytes) -> None:
+    """Publish complete bytes without overwriting even a racing external file."""
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".capture-", delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.link(temporary, path)  # Atomic, and fails if the destination already exists.
+        descriptor = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def preserve_artifact(root: Path, request: dict[str, Any]) -> Entry | None:
+    """Copy one observed source and append canonical metadata before finalization."""
+    root = _validated_root(root)
+    with project_lock(root):
+        if not standard_capture_state(root):
+            return None
+        history, entries = _read_history(root / HISTORY_NAME)
+        entry = _unfinished_owned_entry(entries, request)
+        records = _validate_artifacts(entry.text)
+        if records:
+            outside, _ = _outside_fence_lines(entry.text)
+            if [line.rstrip("\r\n") for _, line in outside if line.startswith("### ")][-1] != "### Artifacts":
+                raise HistoryConflict("existing Artifacts must be the final unfinished section")
+        kind = request.get("kind")
+        if kind not in (None, "Attached file", "Attached image", "Pasted image"):
+            raise InvalidEvent("omit kind for filesystem sources; only observed Desktop attachment/paste kinds are accepted")
+        source_value = request.get("source")
+        source = None
+        if source_value is not None:
+            source = root / _required_string(request, "source")
+        original = request.get("original_name", source.name if source is not None else None)
+        if original is not None and (not isinstance(original, str) or not original):
+            raise InvalidEvent("original_name must be a non-empty string or null")
+        if original is not None:
+            original = Path(original).name
+            _utf8_bytes(original, "original_name")
+        relative = None
+        payload = None
+        reason = None
+        if source is None:
+            reason = request.get("unavailable_reason", "Unknown")
+            if not isinstance(reason, str) or not reason or any(c in reason for c in "\r\n"):
+                raise InvalidEvent("unavailable_reason must be one non-empty factual line")
+        else:
+            try:
+                source = source.resolve()
+                try:
+                    relative = source.relative_to(root)
+                except ValueError:
+                    pass
+                if not source.is_file():
+                    reason = "Source is missing or is not a regular file."
+                else:
+                    payload = source.read_bytes()
+            except (OSError, RuntimeError) as exc:
+                reason = f"Source data unavailable ({type(exc).__name__})."
+        kind = kind or ("Repository file snapshot" if relative is not None else "Requested artifact")
+        fields = [f"- Kind: {kind}"]
+        if original is not None:
+            fields.append(f"- Original name (JSON): {_json_field(original)}")
+        if payload is None:
+            fields += ["- Preservation: Unavailable", f"- Unavailable reason: {reason}"]
+        else:
+            assets = root / "prompt_source_assets"
+            if assets.is_symlink() or (assets.exists() and not assets.is_dir()):
+                raise HistoryConflict("assets must be a real project-local directory")
+            assets.mkdir(exist_ok=True)
+            unnamed = None
+            if kind == "Pasted image" and original is None:
+                unnamed = 1 + sum(r["Kind"] == "Pasted image" and "Original name (JSON)" not in r for r in records)
+            stem, extension = _asset_basename(entry.number, original or source.name, unnamed)
+            destination = assets / (stem + extension)
+            if source.parent == assets and _canonical_asset_name(source.name):
+                destination = source
+            reused = False
+            collision = 1
+            while True:
+                if destination.is_symlink() or destination.exists():
+                    if not destination.is_symlink() and destination.is_file() and destination.read_bytes() == payload:
+                        reused = True
+                        break
+                else:
+                    try:
+                        _publish_asset(destination, payload)
+                        break
+                    except FileExistsError:
+                        continue
+                collision += 1
+                destination = assets / f"{stem}-{collision:03d}{extension}"
+            copied = destination.read_bytes()
+            if copied != payload or source.read_bytes() != payload:
+                raise HistoryConflict("source or preserved copy changed during preservation; no artifact record written")
+            digest = hashlib.sha256(copied).hexdigest()
+            fidelity = {
+                "Attached file": "Byte-for-byte copy of the attached original exposed by Codex Desktop.",
+                "Attached image": "Byte-for-byte copy of the attached original exposed by Codex Desktop.",
+                "Pasted image": PASTED_IMAGE_FIDELITY,
+                "Repository file snapshot": "Byte-for-byte point-in-time copy of the repository source.",
+                "Requested artifact": "Byte-for-byte copy of the requested source.",
+            }[kind]
+            name = destination.name
+            fields += [f"- Preserved copy: [{name}](<prompt_source_assets/{name}>)",
+                       f"- Byte count: {len(copied)}", f"- SHA-256: {digest}", f"- Fidelity: {fidelity}"]
+            if relative is not None:
+                # Encode destinations/labels without importing a networking library.
+                link = "".join(chr(b) if chr(b) in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~/" else f"%{b:02X}"
+                               for b in relative.as_posix().encode("utf-8"))
+                fields.append(f"- Repository source: [{link}](<{link}>)")
+            fields += [f"- Source byte count: {len(payload)}", f"- Source SHA-256: {digest}"]
+            if reused:
+                fields.append("- Reuse note: Existing flat asset verified byte-for-byte and reused.")
+        addition = ("\n### Artifacts\n" if not records else "")
+        addition += f"\n#### Artifact {len(records) + 1}\n\n" + "\n".join(fields) + "\n"
+        updated = history[:entry.end] + addition + history[entry.end:]
+        candidates = validate_history(updated)
+        _atomic_write(root / HISTORY_NAME, updated)
+        return next(item for item in candidates if item.number == entry.number)
+
+
 def finish_standard(root: Path, request: dict[str, Any]) -> Entry | None:
     """Complete only the named unfinished standard entry, retaining its input bytes."""
     root = _validated_root(root)
@@ -1082,6 +1270,10 @@ def finish_standard(root: Path, request: dict[str, Any]) -> Entry | None:
         if isinstance(number, bool) or not isinstance(number, int) or number < 1:
             raise InvalidEvent("entry_number must be a positive integer")
         result = _required_string(request, "result")
+        outside, _ = _outside_fence_lines(result)
+        if any(re.match(r"^(?:## Entry |### (?:User input|Codex Desktop runtime context|Artifacts|Result)(?:\s|$)|#### Artifact )", line)
+               for _, line in outside):
+            raise InvalidEvent("result cannot contain capture sections; use --preserve-artifact for artifacts")
         history, entries = _read_history(root / HISTORY_NAME)
         entry = next((item for item in entries if item.number == number), None)
         if entry is None or entry.fields["Capture method"] != "Instruction-mediated":
@@ -1134,8 +1326,9 @@ def main(argv: list[str] | None = None) -> int:
     mode.add_argument("--capture-state", action="store_true", help="read the current standard capture control")
     mode.add_argument("--begin-standard", action="store_true", help="append a standard entry from stdin JSON")
     mode.add_argument("--finish-standard", action="store_true", help="complete a standard entry from stdin JSON")
+    mode.add_argument("--preserve-artifact", action="store_true", help="preserve one source for an unfinished entry from stdin JSON")
     arguments = parser.parse_args(argv)
-    standard_mode = arguments.capture_state or arguments.begin_standard or arguments.finish_standard
+    standard_mode = arguments.capture_state or arguments.begin_standard or arguments.finish_standard or arguments.preserve_artifact
     error_label = "capture" if standard_mode else "hook"
     try:
         root = Path.cwd()
@@ -1151,8 +1344,8 @@ def main(argv: list[str] | None = None) -> int:
             sys.stdout.write(f"PromptSourceCode: history valid ({len(entries)} entries)\n")
             return 0
         payload = read_event()
-        if arguments.begin_standard or arguments.finish_standard:
-            operation = begin_standard if arguments.begin_standard else finish_standard
+        if arguments.begin_standard or arguments.finish_standard or arguments.preserve_artifact:
+            operation = preserve_artifact if arguments.preserve_artifact else (begin_standard if arguments.begin_standard else finish_standard)
             entry = operation(root, payload)
             if entry is None:
                 _write_json({"capture": "disabled"})

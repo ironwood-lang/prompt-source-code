@@ -71,35 +71,26 @@ Fix only this new entry on failure; a missing validator stops capture, not work.
 
 ## Artifacts and completion
 
-Copy accessible attachments, pastes, and repository sources byte-for-byte as direct
-children. Name from basename: `prompt-<entry>-<stem><extension>`. Lowercase a final 1–16
-ASCII-alphanumeric extension. In stems replace other runs with `-`; collapse hyphens; drop
-leading dots; trim punctuation; cap at 80; use `artifact` if empty.
-Unnamed pastes use `image-001`. Reuse identical bytes; otherwise add `-002`, etc.
-Number records locally and use this exact field spelling/order:
+Before work, preserve each attachment, paste, or requested source using
+`/usr/bin/python3 .prompt-source/validate.py --preserve-artifact` at the Git root.
+Send stdin JSON `entry_number` and `source` (observed path, relative to the Git root).
+For filesystem requests OMIT `kind`: the helper classifies inside-project
+sources as `Repository file snapshot`, others as `Requested artifact`.
+Only actual Desktop attachments/pastes supply `kind`: `Attached file`, `Attached image`,
+or `Pasted image`. Optional `original_name` is the observed filename; use null for an
+unnamed paste. If no source path was exposed, omit `source` and supply a factual,
+path-free `unavailable_reason`, or `Unknown`. Never invent a source path.
 
-```text
-#### Artifact 1
-- Kind: Attached file
-- Original name (JSON): "name"
-- Preserved copy: [filename](<prompt_source_assets/filename>)
-- Byte count: 0
-- SHA-256: lowercase digest
-- Fidelity: factual boundary
-```
-
-Kind is `Attached file`, `Attached image`, `Pasted image`, `Repository file snapshot`, or
-`Requested artifact`. A pasted image uses this physical line:
-
-`- Fidelity: Byte-for-byte copy of the clipboard image materialized by Codex Desktop; binary identity with any pre-clipboard source is not claimed.`
-
-If unavailable, use numbered `Kind`, optional `Original name (JSON)`, `Preservation:
-Unavailable`, and `Unavailable reason`; omit copy, size, hash, and placeholders. Exclude
-absolute external paths from artifact metadata.
+The helper owns padded names, collisions/reuse, byte verification, hashes, fidelity,
+numbered records, and `Unavailable reason`. Never manually copy/name assets
+or write artifact Markdown. It adds `### Artifacts` before the result. For claimed hook
+entries also pass the current `expected_entry_sha256`; use the returned digest for
+subsequent enrichment. Preserve verified records. Pasted-image fidelity covers only
+Desktop-materialized bytes, never an unknown pre-clipboard original.
 
 For standard entries, when done run `/usr/bin/python3 .prompt-source/validate.py --finish-standard` with stdin
-JSON `entry_number` and `result` (factual Markdown summary and relative changed-file links,
-or `Changed files: None.`). It sets `Completed` and adds `### Result` only while capture
+JSON `entry_number` and `result` (summary and relative changed-file links,
+or `Changed files: None.`; no capture section headings). It sets `Completed` and adds `### Result` only while capture
 remains enabled. Capture files are not task work. `Incomplete`
 and trusted-hook `Interrupted` are terminal; input, context, IDs, chronology, and verified
 artifact facts are immutable. Never stage, commit, push, publish, or upload provenance

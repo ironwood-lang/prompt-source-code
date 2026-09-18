@@ -8,8 +8,9 @@ The optional path targets Codex Desktop on macOS and uses only `UserPromptSubmit
 `Interrupt`.
 
 The hooks are local standard-library Python. They make no network requests and run no Git
-commands. They write only the canonical root `PROMPT_SOURCE.md`; artifact copies remain
-agent work under the dedicated instructions. Temporary atomic-write files exist only while
+commands. Event handlers write only the canonical root `PROMPT_SOURCE.md`; the agent
+invokes the project-local [artifact helper](ARTIFACT_CAPTURE.md) for copies under the
+dedicated instructions. Temporary atomic-write files exist only while
 a replacement is active. Serialization locks the existing project directory itself, so
 there is no persistent lock, event log, status file, or diagnostic file.
 
@@ -122,6 +123,9 @@ classification is `Initial prompt` for the first event in a session, `Steering` 
 events with the same turn ID, and `Follow-up` for a later turn. The agent may refine a
 claimed entry to `Correction`, add `Supersedes`, attach runtime context or artifact
 metadata, and complete it. It must preserve the hook-captured input and identifiers.
+Use `.prompt-source/validate.py --preserve-artifact` with the current entry digest for
+artifact copies and metadata. Its returned digest replaces the prior digest for subsequent
+enrichment. Keep previously recorded artifact facts unchanged; stale digests are rejected.
 
 Hook-assisted entry replacements use the same core's `--replace-entry` interface. Its
 stdin JSON contains `entry_number`, `session_id`, `turn_id`, `prompt_utf8_base64`, the

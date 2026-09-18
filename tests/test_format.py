@@ -336,12 +336,10 @@ class FormatFixtureTests(unittest.TestCase):
             "- Fidelity: Byte-for-byte copy of the clipboard image materialized by "
             "Codex Desktop; binary identity with any pre-clipboard source is not claimed."
         )
-        for path in (FIXTURE, SPEC, INSTRUCTIONS):
+        for path in (FIXTURE, SPEC):
             lines = path.read_text(encoding="utf-8").splitlines()
             if path == FIXTURE:
                 expected = fidelity
-            elif path == INSTRUCTIONS:
-                expected = f"`{fidelity}`"
             else:
                 expected = fidelity.removeprefix("- Fidelity: ")
             self.assertIn(expected, lines, f"{path} must keep the fidelity value on one line")
@@ -456,8 +454,9 @@ class FormatFixtureTests(unittest.TestCase):
             "factual path-free summary",
             "correction during OR after a turn",
             "has no trusted Stop reason",
-            "#### Artifact 1",
-            "Preserved copy: [filename](<prompt_source_assets/filename>)",
+            "--preserve-artifact",
+            "For filesystem requests OMIT `kind`",
+            "Never manually copy/name assets",
             "Unavailable reason",
             "are terminal",
         ]

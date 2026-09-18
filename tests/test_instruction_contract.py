@@ -1,3 +1,5 @@
+import base64
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -147,6 +149,13 @@ class InstructionContractTests(unittest.TestCase):
             (project / "PROMPT_SOURCE.md").write_bytes(
                 (ROOT / "tests/fixtures/expected-history.md").read_bytes()
             )
+            # File validation now checks the referenced bytes as well as the schema.
+            fixtures = json.loads((ROOT / "tests/fixtures/artifacts.json").read_text())
+            for artifact in fixtures["artifacts"]:
+                if artifact["captured_path"] is not None:
+                    destination = project / artifact["captured_path"]
+                    destination.parent.mkdir(exist_ok=True)
+                    destination.write_bytes(base64.b64decode(artifact["payload_base64"], validate=True))
             nested = project / "packages/demo"
             nested.mkdir(parents=True)
 

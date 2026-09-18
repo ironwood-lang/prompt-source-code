@@ -88,6 +88,9 @@ changing to the Git root first makes the same command work from a nested project
 
 Standard text capture is model-mediated. Do not describe read-back as independent source
 verification.
+When artifacts are present, the same validator also checks their canonical names, local
+copies, byte counts, and SHA-256 values. The [artifact helper](ARTIFACT_CAPTURE.md) owns
+copying and metadata assembly; no extra installation step or enabled hook is needed.
 
 ## 3. Update the loader and dedicated instructions
 

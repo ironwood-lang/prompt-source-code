@@ -97,7 +97,8 @@ contributor guidance and must not be copied into an end-user project.
 The installer also copies the shared standard-library schema module from
 [`../hooks/prompt_source_core.py`](../hooks/prompt_source_core.py) to
 `.prompt-source/validate.py`. The standard contract uses `--capture-state`,
-`--begin-standard`, `--finish-standard`, and the read-only `--validate-history` mode. The
+`--begin-standard`, `--preserve-artifact`, `--finish-standard`, and the read-only
+`--validate-history` mode. The
 installed file is not configured as a hook, does not activate hooks, and performs no
 network or Git operation.
 When invoked as the installed `.prompt-source/validate.py`, its standard commands locate
@@ -120,9 +121,18 @@ the first user submission. Without the runtime identifier, classification uses t
 agent-supplied conversation context. These facts do not make model-mediated text capture
 deterministic.
 
-Artifact/context enrichment remains agent work. The helper's serialized text writes do
-not make arbitrary direct edits or artifact copies transactional. The standard path still
-requires model compliance with the instructions.
+The agent identifies observed artifact paths and Desktop attachment/paste kinds. The
+helper deterministically names, classifies, copies, verifies, and records them through
+`--preserve-artifact`; see the [artifact helper contract](ARTIFACT_CAPTURE.md). Filesystem
+classification uses the resolved source location, not a model-selected kind. The agent
+still supplies runtime context and factual results. `--finish-standard` rejects capture
+sections inside its result argument. This is a writer safeguard, not a retroactive
+reordering of historical entries.
+
+History validation checks canonical padded asset prefixes and verifies each recorded
+copy's size and digest. It cannot reconstruct an omitted original source or independently
+prove whether a model supplied the correct Desktop attachment kind. The standard path
+still requires model compliance with the instructions.
 
 The canonical project path and instruction marker are versioned independently of storage
 schema. The loader is 300 words/2,048 bytes maximum, the dedicated contract is 900
