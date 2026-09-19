@@ -1,6 +1,6 @@
 # PromptSourceCode
 
-> The prompt history is the new source code.
+> The prompt history is becoming the new source code.
 
 Most AI-assisted projects keep the finished files but lose the conversation that shaped
 them. PromptSourceCode keeps that story with the project: what you asked for, what you
